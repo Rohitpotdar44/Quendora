@@ -25,8 +25,6 @@ public class AdminController_20 {
         return new ResponseEntity<>(allEntries, HttpStatus.NOT_FOUND);
     }
 
-    @PostMapping("/create-admin")
-    public void createAdmin(@RequestBody User_12 user12) {
-        userService_14.saveAdmin(user12);
-    }
+    // Admin creation moved to /public/createAdmin with admin key validation
+    // This endpoint is now reserved for other admin operations
 }

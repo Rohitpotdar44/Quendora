@@ -1,0 +1,300 @@
+.dashboard {
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.dashboard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: #6c757d;
+}
+
+/* Header Styles */
+.dashboard-header {
+  background: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #e9ecef;
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.dashboard-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #2c3e50;
+  margin: 0 0 4px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-text {
+  color: #6c757d;
+  margin: 0;
+  font-size: 16px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.user-info {
+  text-align: right;
+}
+
+.user-email {
+  display: block;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+}
+
+.user-roles {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.role-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.role-badge.user {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.role-badge.admin {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.admin-btn, .logout-btn {
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+/* Navigation Styles */
+.dashboard-nav {
+  background: white;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.nav-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  gap: 0;
+}
+
+.nav-tab {
+  padding: 16px 24px;
+  border: none;
+  background: transparent;
+  color: #6c757d;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.nav-tab:hover {
+  color: #495057;
+  background: #f8f9fa;
+}
+
+.nav-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: #f8f9fa;
+}
+
+/* Main Content Styles */
+.dashboard-main {
+  padding: 32px 0;
+}
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.create-btn {
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Profile Section Styles */
+.profile-section {
+  max-width: 600px;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.info-row label {
+  font-weight: 600;
+  color: #495057;
+  min-width: 120px;
+  margin-top: 2px;
+}
+
+.info-row span {
+  color: #6c757d;
+  flex: 1;
+}
+
+.roles-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.unique-key-info {
+  flex: 1;
+}
+
+.unique-key-display {
+  display: block;
+  background: #f8f9fa;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #667eea;
+  border: 2px solid #e9ecef;
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+
+.key-note {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.no-key-message {
+  flex: 1;
+}
+
+.no-key-text {
+  color: #dc3545;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  padding: 12px 16px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+}
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 16px;
+  }
+  
+  .header-left {
+    text-align: center;
+  }
+  
+  .header-right {
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+  
+  .user-info {
+    text-align: center;
+  }
+  
+  .header-actions {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .nav-content {
+    padding: 0 16px;
+  }
+  
+  .nav-tab {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  
+  .main-content {
+    padding: 0 16px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .create-btn {
+    width: 100%;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .info-row label {
+    min-width: auto;
+  }
+}

@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class userService_14 {
@@ -124,7 +126,7 @@ public class userService_14 {
             }
             
             String username = parts[0];
-            long timestamp = Long.parseLong(parts[1]);
+            Long.parseLong(parts[1]); // timestamp (not used but parsed for validation)
             long expiration = Long.parseLong(parts[2]);
             
             // Check if token is expired
@@ -159,6 +161,61 @@ public class userService_14 {
      */
     public boolean verifyPassword(String rawPassword, String encodedPassword) {
         return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
+    
+    /**
+     * Check if any admin user exists in the system
+     * Returns true if at least one user has ADMIN role
+     */
+    public boolean hasAdminUser() {
+        try {
+            return getAllEntries().stream()
+                    .anyMatch(user -> user.getRoles() != null && user.getRoles().contains("ADMIN"));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // ==================== UNIQUE KEY GENERATION METHODS ====================
+    
+    /**
+     * Generate a unique key using user's email ID
+     * Uses SHA-256 hashing with timestamp for uniqueness
+     */
+    public String generateUniqueKey(String email) {
+        try {
+            long timestamp = System.currentTimeMillis();
+            String input = email + "_" + timestamp + "_MyJournalApp2024";
+            
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            
+            // Convert to hex string and take first 16 characters
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            
+            return hexString.toString().substring(0, 16).toUpperCase();
+        } catch (Exception e) {
+            // Fallback to simple hash if SHA-256 fails
+            return email.replaceAll("[^a-zA-Z0-9]", "").toUpperCase() + "_" + 
+                   String.valueOf(System.currentTimeMillis()).substring(8);
+        }
+    }
+    
+    /**
+     * Find user by email
+     */
+    public User_12 findByEmail(String email) {
+        return getAllEntries().stream()
+                .filter(user -> email.equals(user.getEmail()))
+                .findFirst()
+                .orElse(null);
     }
 
 

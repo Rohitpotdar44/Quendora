@@ -21,15 +21,26 @@ public class User_12 {
     @NonNull
     private String userName;
     @NonNull
-    private  String password;
+    private String password;
+    private String email;
+    private String uniqueKey; // Generated using email ID
+    private boolean isFirstLogin; // To track if user needs to see the unique key
     private List<String> roles;
 
 
     // basically for the authentication purpose we have to make a link between the journalEntry and Users
     // we make list but to link we have to use @DBRef
     @DBRef
+    @Builder.Default
     private List<JournalEntry_6> allEntries = new ArrayList<>();
 
+    // Getter and setter for isFirstLogin (Lombok should handle this but adding manually for safety)
+    public boolean getIsFirstLogin() {
+        return isFirstLogin;
+    }
 
+    public void setIsFirstLogin(boolean isFirstLogin) {
+        this.isFirstLogin = isFirstLogin;
+    }
 
 }

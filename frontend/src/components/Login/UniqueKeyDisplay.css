@@ -1,0 +1,82 @@
+.unique-key-modal {
+  max-width: 600px;
+  width: 95%;
+}
+
+.unique-key-content {
+  margin-bottom: 24px;
+}
+
+.message-text {
+  margin: 20px 0;
+  line-height: 1.6;
+}
+
+.message-text p {
+  margin: 8px 0;
+  color: #495057;
+}
+
+.unique-key-display {
+  margin: 24px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+}
+
+.key-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.key-input {
+  flex: 1;
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-align: center;
+  background: white;
+  border: 2px solid #667eea;
+  color: #667eea;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.copy-btn {
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
+  border-top: 2px solid #f8f9fa;
+}
+
+.modal-actions .btn {
+  min-width: 200px;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .key-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .copy-btn {
+    width: 100%;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+  }
+}

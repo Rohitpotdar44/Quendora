@@ -1,0 +1,103 @@
+.journal-entry-list {
+  margin-top: 24px;
+}
+
+.entries-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+/* Empty State Styles */
+.empty-state {
+  text-align: center;
+  padding: 60px 40px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-top: 24px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  opacity: 0.7;
+}
+
+.empty-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.empty-description {
+  font-size: 16px;
+  color: #6c757d;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-tips {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: left;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.empty-tips h4 {
+  color: #495057;
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.empty-tips ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.empty-tips li {
+  padding: 8px 0;
+  color: #6c757d;
+  position: relative;
+  padding-left: 20px;
+}
+
+.empty-tips li:before {
+  content: "•";
+  color: #667eea;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .entries-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .empty-state {
+    padding: 40px 20px;
+    margin: 16px 0;
+  }
+  
+  .empty-icon {
+    font-size: 48px;
+  }
+  
+  .empty-title {
+    font-size: 20px;
+  }
+  
+  .empty-description {
+    font-size: 14px;
+  }
+}
