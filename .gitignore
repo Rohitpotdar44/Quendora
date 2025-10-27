@@ -34,3 +34,9 @@ build/
 
 ### Node.js ###
 node_modules/
+
+# Ignore Spring Boot application config
+src/main/resources/application.properties
+
+# Ignore all Spring config files
+src/main/resources/application*.properties
