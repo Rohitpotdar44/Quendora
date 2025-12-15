@@ -62,56 +62,57 @@
         public ResponseEntity<?> getAllEntriesOfUser(@RequestParam(value = "decrypt", required = false, defaultValue = "false") boolean decrypt,
                                                      @RequestHeader(value = "Authorization", required = false) String authorization)
         {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication(); // get that authenticated user
-            String userName = authentication.getName();
-            User_12 byUserName = userService14.findByUserName(userName);
-            List<JournalEntry_6> allEntries = byUserName.getAllEntries();
-
-            // If Bearer token equals the secret key, enable decryption (for Postman demo)
-            boolean headerRequestsDecryption = false;
             try {
-                String configuredKey = "PdRgUkXp2s5v8y/B"; // TODO: load from application.properties
-                if (authorization != null && authorization.startsWith("Bearer ")) {
-                    String token = authorization.substring(7).trim();
-                    // For demo: decrypt if any token is present OR matches configured key
-                    headerRequestsDecryption = !token.isEmpty() || configuredKey.equals(token);
-                    System.out.println("[GET /journalCopies] Authorization header seen. Token length=" + token.length() + ", willDecrypt=" + headerRequestsDecryption);
-                } else {
-                    System.out.println("[GET /journalCopies] No Authorization header or not Bearer format");
+                System.out.println("[GET /journalCopies] ===== GET ALL ENTRIES REQUEST =====");
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication(); // get that authenticated user
+                
+                if (authentication == null) {
+                    System.out.println("[GET /journalCopies] ERROR: No authentication found in SecurityContext");
+                    return new ResponseEntity<>("Authentication required", HttpStatus.UNAUTHORIZED);
                 }
-            } catch (Exception e) { System.out.println("[GET /journalCopies] Header parse error: " + e.getMessage()); }
-
-            if ((decrypt || headerRequestsDecryption) && allEntries != null && !allEntries.isEmpty()) {
-                // Create shallow copies to avoid mutating user's in-memory list
-                List<JournalEntry_6> decrypted = new ArrayList<>();
-                for (JournalEntry_6 e : allEntries) {
-                    JournalEntry_6 copy = new JournalEntry_6();
-                    copy.setId(e.getId());
-                    copy.setLocalDateTime(e.getLocalDateTime());
-                    // Decrypt title/content if they look encrypted
-                    String t = e.getTitle();
-                    String c = e.getContent();
-                    try {
-                        if (t != null && journalEntryService_10.isEncrypted(t)) {
-                            t = journalEntryService_10.decryptContent(t);
-                        }
-                    } catch (Exception ignore) {}
-                    try {
-                        if (c != null && journalEntryService_10.isEncrypted(c)) {
-                            c = journalEntryService_10.decryptContent(c);
-                        }
-                    } catch (Exception ignore) {}
-                    copy.setTitle(t);
-                    copy.setContent(c);
-                    decrypted.add(copy);
+                
+                String userName = authentication.getName();
+                System.out.println("[GET /journalCopies] Authenticated user: " + userName);
+                System.out.println("[GET /journalCopies] Authorization header: " + (authorization != null ? "present" : "null"));
+                
+                User_12 byUserName = userService14.findByUserName(userName);
+                if (byUserName == null) {
+                    System.out.println("[GET /journalCopies] ERROR: User not found in database: " + userName);
+                    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
                 }
-                return new ResponseEntity<>(decrypted, HttpStatus.OK);
-            }
+                
+                List<JournalEntry_6> allEntries = byUserName.getAllEntries();
+                System.out.println("[GET /journalCopies] User has " + allEntries.size() + " entries");
+                
+                // Extract unique key from Authorization header (if present)
+                String providedUniqueKey = extractBearerToken(authorization);
+                boolean hasValidUniqueKey = providedUniqueKey != null
+                        && userService14.matchesUniqueKey(providedUniqueKey, byUserName.getUniqueKeyHash());
+                
+                if ((decrypt || hasValidUniqueKey) && !hasValidUniqueKey) {
+                    return ResponseEntity.badRequest().body("Provide your unique key using the Bearer token header to view decrypted entries.");
+                }
+                
+                if (hasValidUniqueKey && allEntries != null && !allEntries.isEmpty()) {
+                    System.out.println("[GET /journalCopies] ✅ Valid uniqueKey provided - returning decrypted entries");
+                    List<JournalEntry_6> decrypted = decryptEntriesWithUserKey(allEntries, providedUniqueKey);
+                    return new ResponseEntity<>(decrypted, HttpStatus.OK);
+                }
 
             if ( allEntries!=null && ! allEntries.isEmpty()){
+                System.out.println("[GET /journalCopies] Returning " + allEntries.size() + " entries");
                 return new ResponseEntity<>(allEntries,HttpStatus.OK);
             }
-            return new ResponseEntity<>(allEntries,HttpStatus.NOT_FOUND);
+            System.out.println("[GET /journalCopies] No entries found, returning empty list");
+            return new ResponseEntity<>(allEntries,HttpStatus.OK);
+            
+            } catch (Exception e) {
+                System.out.println("[GET /journalCopies] ===== ERROR =====");
+                System.out.println("[GET /journalCopies] Exception: " + e.getClass().getName());
+                System.out.println("[GET /journalCopies] Message: " + e.getMessage());
+                e.printStackTrace();
+                return new ResponseEntity<>("Error fetching entries: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         }
 
 
@@ -119,15 +120,47 @@
 
 
         @PostMapping
-        public ResponseEntity<JournalEntry_6> createEntry(@RequestBody JournalEntry_6 myEntry ) {
+        public ResponseEntity<?> createEntry(@RequestBody Map<String, Object> request) {
            try {
-               Authentication authentication = SecurityContextHolder.getContext().getAuthentication(); // get that authenticated user
+               System.out.println("[POST /journalCopies] ===== CREATE ENTRY REQUEST =====");
+               Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                String userName = authentication.getName();
+               System.out.println("[POST /journalCopies] Authenticated user: " + userName);
+               
+               // Extract entry data and uniqueKey
+               String uniqueKey = (String) request.get("uniqueKey");
+               System.out.println("[POST /journalCopies] uniqueKey received: " + (uniqueKey != null ? "YES (length=" + uniqueKey.length() + ")" : "NO"));
+               
+               if (uniqueKey == null || uniqueKey.isEmpty()) {
+                   System.out.println("[POST /journalCopies] ERROR: uniqueKey is null or empty");
+                   return ResponseEntity.badRequest().body("Unique key is required to encrypt entries");
+               }
+               
+               Map<String, String> entryData = (Map<String, String>) request.get("entry");
+               if (entryData == null) {
+                   System.out.println("[POST /journalCopies] ERROR: entry data is null");
+                   return ResponseEntity.badRequest().body("Entry data is required");
+               }
+               
+               System.out.println("[POST /journalCopies] Entry title: " + entryData.get("title"));
+               System.out.println("[POST /journalCopies] Entry content length: " + (entryData.get("content") != null ? entryData.get("content").length() : 0));
+               
+               JournalEntry_6 myEntry = new JournalEntry_6();
+               myEntry.setTitle(entryData.get("title"));
+               myEntry.setContent(entryData.get("content"));
                myEntry.setLocalDateTime(LocalDateTime.now());
-               journalEntryService_10.saveEntry(myEntry ,userName);
+               
+               System.out.println("[POST /journalCopies] Calling saveEntry...");
+               journalEntryService_10.saveEntry(myEntry, userName, uniqueKey);
+               System.out.println("[POST /journalCopies] Entry saved successfully!");
+               
                return new ResponseEntity<>(myEntry, HttpStatus.OK);
            } catch (Exception e) {
-               return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+               System.out.println("[POST /journalCopies] ===== ERROR =====");
+               System.out.println("[POST /journalCopies] Exception: " + e.getClass().getName());
+               System.out.println("[POST /journalCopies] Message: " + e.getMessage());
+               e.printStackTrace();
+               return new ResponseEntity<>("Error creating entry: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
            }
         }
         // logic is written in JournalEntryService_10
@@ -159,27 +192,21 @@
                         }
                     } catch (Exception e) { System.out.println("[GET /journalCopies/id] Header parse error: " + e.getMessage()); }
                     if (decrypt || headerRequestsDecryption) {
-                        // Make a copy to avoid mutating persisted entity
-                        JournalEntry_6 copy = new JournalEntry_6();
-                        copy.setId(entry.getId());
-                        copy.setLocalDateTime(entry.getLocalDateTime());
-                        String t = entry.getTitle();
-                        String c = entry.getContent();
-                        try {
-                            if (t != null && journalEntryService_10.isEncrypted(t)) {
-                                t = journalEntryService_10.decryptContent(t);
-                            }
-                        } catch (Exception ignore) {}
-                        try {
-                            if (c != null && journalEntryService_10.isEncrypted(c)) {
-                                c = journalEntryService_10.decryptContent(c);
-                            }
-                        } catch (Exception ignore) {}
-                        copy.setTitle(t);
-                        copy.setContent(c);
-                        return new ResponseEntity<>(copy, HttpStatus.OK);
+                        String providedUniqueKey = extractBearerToken(authorization);
+                        boolean hasValidUniqueKey = providedUniqueKey != null
+                                && userService14.matchesUniqueKey(providedUniqueKey, user.getUniqueKeyHash());
+
+                        if ((decrypt || hasValidUniqueKey) && !hasValidUniqueKey) {
+                            return ResponseEntity.badRequest().body(null);
+                        }
+
+                        if (hasValidUniqueKey) {
+                            JournalEntry_6 decrypted = decryptSingleEntryWithUserKey(entry, providedUniqueKey);
+                            return new ResponseEntity<>(decrypted, HttpStatus.OK);
+                        }
+
+                        return new ResponseEntity<>(entry, HttpStatus.OK);
                     }
-                    return new ResponseEntity<>(entry, HttpStatus.OK);
                 }
             }
 
@@ -211,82 +238,128 @@
 
         @PutMapping("/id/{myId}")
         public ResponseEntity<?> updateJournalById(
-                @PathVariable ObjectId myId,          // 1. Takes the journal ID from URL (e.g., `/id/123`)
-                @RequestBody JournalEntry_6 newEntry
-
+                @PathVariable ObjectId myId,
+                @RequestBody Map<String, Object> request
         ) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication(); // get that authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userName = authentication.getName();
             User_12 user = userService14.findByUserName(userName);
             List<JournalEntry_6> collect = user.getAllEntries().stream().filter(x -> x.getId().equals(myId)).collect(Collectors.toList());
+            
             if(!collect.isEmpty()){
                 Optional<JournalEntry_6> journalEntry_6 = journalEntryService_10.findById(myId);
                 if (journalEntry_6.isPresent()) {
-                      JournalEntry_6 old=  journalEntry_6.get();
-                    old.setTitle(
-                            (newEntry.getTitle() != null && !newEntry.getTitle().equals(""))
-                                    ? newEntry.getTitle()  // Use new title if valid
-                                    : old.getTitle()      // Keep old title otherwise
-                    );
-
-                    // 6. Same logic for CONTENT
-                    old.setContent(
-                            (newEntry.getContent() != null && !newEntry.getContent().equals(""))
-                                    ? newEntry.getContent()
-                                    : old.getContent()
-                    );
-                    // 7. Save the (updated or unchanged) entry back to the database
-                    journalEntryService_10.saveEntry(old, userName);  // use the method with encryption
-                    return new ResponseEntity<>(old,HttpStatus.OK);
+                    // Extract data from request
+                    Map<String, String> entryData = (Map<String, String>) request.get("entry");
+                    String uniqueKey = (String) request.get("uniqueKey");
+                    
+                    if (uniqueKey == null || uniqueKey.isEmpty()) {
+                        return ResponseEntity.badRequest().body("Unique key is required to encrypt updates");
+                    }
+                    
+                    JournalEntry_6 old = journalEntry_6.get();
+                    
+                    // Update with new encrypted content
+                    if (entryData.get("title") != null && !entryData.get("title").isEmpty()) {
+                        old.setTitle(entryData.get("title"));
+                    }
+                    
+                    if (entryData.get("content") != null && !entryData.get("content").isEmpty()) {
+                        old.setContent(entryData.get("content"));
+                    }
+                    
+                    // Save with encryption
+                    journalEntryService_10.saveEntry(old, userName, uniqueKey);
+                    return new ResponseEntity<>(old, HttpStatus.OK);
                 }
-                }
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        private String extractBearerToken(String authorization) {
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                String token = authorization.substring(7).trim();
+                return token.isEmpty() ? null : token;
+            }
+            return null;
+        }
+
+        private List<JournalEntry_6> decryptEntriesWithUserKey(List<JournalEntry_6> entries, String uniqueKey) {
+            List<JournalEntry_6> decrypted = new ArrayList<>();
+            for (JournalEntry_6 entry : entries) {
+                decrypted.add(decryptSingleEntryWithUserKey(entry, uniqueKey));
+            }
+            return decrypted;
+        }
+
+        private JournalEntry_6 decryptSingleEntryWithUserKey(JournalEntry_6 entry, String uniqueKey) {
+            JournalEntry_6 copy = new JournalEntry_6();
+            copy.setId(entry.getId());
+            copy.setLocalDateTime(entry.getLocalDateTime());
+            copy.setTitle(decryptFieldIfNeeded(entry.getTitle(), uniqueKey));
+            copy.setContent(decryptFieldIfNeeded(entry.getContent(), uniqueKey));
+            return copy;
+        }
+
+        private String decryptFieldIfNeeded(String value, String uniqueKey) {
+            if (value == null) {
+                return null;
+            }
+            try {
+                if (journalEntryService_10.isEncrypted(value)) {
+                    return journalEntryService_10.decryptWithUserKey(value, uniqueKey);
+                }
+            } catch (Exception e) {
+                System.out.println("[journalCopies] Decrypt error: " + e.getMessage());
+            }
+            return value;
+        }
 
         @PostMapping("/decrypt")
         public ResponseEntity<?> decryptEntry(@RequestBody Map<String, Object> request) {
             try {
+                System.out.println("[POST /journalCopies/decrypt] ===== DECRYPT REQUEST =====");
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                 String userName = authentication.getName();
-                String secretKey = (String) request.get("secretKey");
+                System.out.println("[POST /journalCopies/decrypt] User: " + userName);
                 
-                // Debug logging
-                System.out.println("Decrypt request received for user: " + userName);
-                System.out.println("Secret key received: " + secretKey);
-                System.out.println("Request data: " + request);
+                // Get the user's unique key from request
+                String userUniqueKey = (String) request.get("uniqueKey");
+                System.out.println("[POST /journalCopies/decrypt] uniqueKey received: " + (userUniqueKey != null ? "YES (length=" + userUniqueKey.length() + ")" : "NO"));
                 
-                if (secretKey == null || secretKey.trim().isEmpty()) {
-                    System.out.println("Secret key is null or empty");
-                    return ResponseEntity.badRequest().body("Secret key is required");
-                }
-                
-                // For now, we'll use the configured encryption key for validation
-                // In a real app, you might want to use the user's unique key or a different approach
-                String configuredKey = "PdRgUkXp2s5v8y/B"; // This should come from application.properties
-                
-                if (!secretKey.equals(configuredKey)) {
-                    return ResponseEntity.badRequest().body("Invalid secret key");
+                if (userUniqueKey == null || userUniqueKey.trim().isEmpty()) {
+                    System.out.println("[POST /journalCopies/decrypt] ERROR: uniqueKey is null or empty");
+                    return ResponseEntity.badRequest().body("Unique key is required for decryption");
                 }
                 
                 // Get the entry data
                 Map<String, Object> entryData = (Map<String, Object>) request.get("entryData");
                 if (entryData == null) {
+                    System.out.println("[POST /journalCopies/decrypt] ERROR: entryData is null");
                     return ResponseEntity.badRequest().body("Entry data is required");
                 }
                 
                 String encryptedTitle = (String) entryData.get("title");
                 String encryptedContent = (String) entryData.get("content");
+                System.out.println("[POST /journalCopies/decrypt] Encrypted title length: " + (encryptedTitle != null ? encryptedTitle.length() : 0));
+                System.out.println("[POST /journalCopies/decrypt] Encrypted content length: " + (encryptedContent != null ? encryptedContent.length() : 0));
                 
-                // Decrypt the content
+                // Decrypt with user's unique key
                 String decryptedTitle = encryptedTitle;
                 String decryptedContent = encryptedContent;
                 
+                System.out.println("[POST /journalCopies/decrypt] Starting decryption...");
+                
                 if (encryptedTitle != null && journalEntryService_10.isEncrypted(encryptedTitle)) {
-                    decryptedTitle = journalEntryService_10.decryptContent(encryptedTitle);
+                    System.out.println("[POST /journalCopies/decrypt] Decrypting title...");
+                    decryptedTitle = journalEntryService_10.decryptWithUserKey(encryptedTitle, userUniqueKey);
+                    System.out.println("[POST /journalCopies/decrypt] Title decrypted: " + decryptedTitle);
                 }
                 
                 if (encryptedContent != null && journalEntryService_10.isEncrypted(encryptedContent)) {
-                    decryptedContent = journalEntryService_10.decryptContent(encryptedContent);
+                    System.out.println("[POST /journalCopies/decrypt] Decrypting content...");
+                    decryptedContent = journalEntryService_10.decryptWithUserKey(encryptedContent, userUniqueKey);
+                    System.out.println("[POST /journalCopies/decrypt] Content decrypted (length: " + decryptedContent.length() + ")");
                 }
                 
                 Map<String, Object> response = new HashMap<>();
@@ -294,10 +367,16 @@
                 response.put("content", decryptedContent);
                 response.put("message", "Entry decrypted successfully");
                 
+                System.out.println("[POST /journalCopies/decrypt] ✅ Decryption successful!");
                 return ResponseEntity.ok(response);
                 
             } catch (Exception e) {
+                System.out.println("[POST /journalCopies/decrypt] ===== ERROR =====");
+                System.out.println("[POST /journalCopies/decrypt] Exception: " + e.getClass().getName());
+                System.out.println("[POST /journalCopies/decrypt] Message: " + e.getMessage());
+                e.printStackTrace();
                 return ResponseEntity.badRequest().body("Decryption failed: " + e.getMessage());
             }
         }
     }
+

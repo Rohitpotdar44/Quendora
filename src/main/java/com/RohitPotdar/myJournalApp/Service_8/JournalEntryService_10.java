@@ -45,31 +45,43 @@ public class JournalEntryService_10 {
 //    }
 
     @Transactional
-    public void saveEntry(JournalEntry_6 journalEntry_6 ,String userName ){          // service here uses save() method from the Repository
+    public void saveEntry(JournalEntry_6 journalEntry_6, String userName, String userUniqueKey) {
        try {
-           // Encrypt the title before saving
+           System.out.println("[saveEntry] Starting save for user: " + userName);
+           
+           // Encrypt the title and content with user's unique key
            if (journalEntry_6.getTitle() != null && !journalEntry_6.getTitle().isEmpty()) {
-               String encryptedTitle = encryptContent(journalEntry_6.getTitle());
+               String encryptedTitle = encryptWithUserKey(journalEntry_6.getTitle(), userUniqueKey);
                journalEntry_6.setTitle(encryptedTitle);
+               System.out.println("[saveEntry] Title encrypted");
            }
            
-           // Encrypt the content before saving
            if (journalEntry_6.getContent() != null && !journalEntry_6.getContent().isEmpty()) {
-               String encryptedContent = encryptContent(journalEntry_6.getContent());
+               String encryptedContent = encryptWithUserKey(journalEntry_6.getContent(), userUniqueKey);
                journalEntry_6.setContent(encryptedContent);
+               System.out.println("[saveEntry] Content encrypted");
            }
            
-           User_12 user = userService14.findByUserName(userName); // like getting user  / rohit
-           JournalEntry_6 saved = journalEntryRepository_11.save(journalEntry_6); // saving entries
-           user.getAllEntries().add(saved); // add saved entry in the user's journal entry
-//           user.setUserName(null);
-           // now due to this entry will be saved in the journal entries but it will nut saved in the user's joutnal entries , because we set username null before saving it
-           // so due avoid this uncertainity like have of execution is running and another is not ,
-           // so to avoid this we use transactional *****-> for more info see theory written
-           userService14.saveUser(user); // saving user
+           User_12 user = userService14.findByUserName(userName);
+           System.out.println("[saveEntry] Found user, current entries: " + user.getAllEntries().size());
+           
+           JournalEntry_6 saved = journalEntryRepository_11.save(journalEntry_6);
+           System.out.println("[saveEntry] Entry saved to DB with ID: " + saved.getId());
+           
+           // Ensure we don't store duplicates when updating existing entries
+           if (saved.getId() != null) {
+               user.getAllEntries().removeIf(existing -> existing.getId().equals(saved.getId()));
+           }
+           user.getAllEntries().add(saved);
+           System.out.println("[saveEntry] Added/updated entry in user list, now has: " + user.getAllEntries().size());
+           
+           userService14.saveUser(user);
+           System.out.println("[saveEntry] User saved successfully");
+           
        } catch (RuntimeException e) {
-           System.out.println(e);
-           throw new RuntimeException("An error occured while saving the entry" +e);
+           System.out.println("[saveEntry] ERROR: " + e.getMessage());
+           e.printStackTrace();
+           throw new RuntimeException("An error occurred while saving the entry: " + e);
        }
     }
     // basically this method is for saving entries in mongodb as it takes JournalEntry_6 as i/p and saves it in journalEntryRepository_11 (in Mongo Repository)
@@ -173,7 +185,7 @@ public class JournalEntryService_10 {
         if (ObjectUtils.isEmpty(plainText)) {
             return plainText;
         }
-
+            
         try {
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
             cipher.init(Cipher.ENCRYPT_MODE, getKey(keyString));
@@ -216,6 +228,50 @@ public class JournalEntryService_10 {
             return true;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    // ==================== USER-KEY ENCRYPTION METHODS ====================
+    
+    /**
+     * Encrypt content using the user's unique key
+     */
+    public String encryptWithUserKey(String plainText, String userUniqueKey) throws RuntimeException {
+        if (ObjectUtils.isEmpty(userUniqueKey)) {
+            throw new IllegalArgumentException("User unique key not provided");
+        }
+        
+        if (ObjectUtils.isEmpty(plainText)) {
+            return plainText;
+        }
+
+        try {
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
+            cipher.init(Cipher.ENCRYPT_MODE, getKey(userUniqueKey));
+            return Base64.getEncoder().encodeToString(cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new RuntimeException("Error while encrypting with user key: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Decrypt content using the user's unique key
+     */
+    public String decryptWithUserKey(String cipherText, String userUniqueKey) throws RuntimeException {
+        if (ObjectUtils.isEmpty(userUniqueKey)) {
+            throw new IllegalArgumentException("User unique key not provided");
+        }
+        
+        if (ObjectUtils.isEmpty(cipherText)) {
+            return cipherText;
+        }
+
+        try {
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING");
+            cipher.init(Cipher.DECRYPT_MODE, getKey(userUniqueKey));
+            return new String(cipher.doFinal(Base64.getDecoder().decode(cipherText)), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("Error while decrypting with user key: " + e.getMessage(), e);
         }
     }
 }

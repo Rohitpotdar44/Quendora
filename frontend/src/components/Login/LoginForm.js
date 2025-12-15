@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRecoilState } from 'recoil';
 import { authAPI } from '../../services/api';
 import { authState, showUniqueKeyModal, uniqueKeyMessage } from '../../state/atoms';
-import { saveAuthData } from '../../utils/auth';
-import UniqueKeyDisplay from './UniqueKeyDisplay';
-import Toast from '../UI/Toast';
+import UniqueKeyModal from './UniqueKeyModal';
 import './LoginForm.css';
 
 const LoginForm = () => {
@@ -17,8 +15,6 @@ const LoginForm = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [toast, setToast] = useState(null);
   
   const [auth, setAuth] = useRecoilState(authState);
   const [showModal, setShowModal] = useRecoilState(showUniqueKeyModal);
@@ -32,52 +28,78 @@ const LoginForm = () => {
       [e.target.name]: e.target.value
     });
     setError('');
-    setSuccess('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setSuccess('');
 
     try {
       if (isLogin) {
-        // Login Logic
-        const response = await authAPI.login({
-          userName: formData.userName,
-          password: formData.password
-        });
-
-        const { username, email, roles, uniqueKey, showUniqueKey, uniqueKeyMessage } = response.data;
+        // Login - Check for saved unique key in localStorage
+        const savedAuthData = localStorage.getItem('auth_state');
+        let existingUniqueKey = null;
         
-        const user = { username, email, roles };
-        saveAuthData(user, uniqueKey);
-        
-        // Store the unique key for API authentication
-        localStorage.setItem('uniqueKey', uniqueKey);
-        
-        setAuth({
-          isAuthenticated: true,
-          user,
-          uniqueKey,
-          isLoading: false
-        });
-
-        // Show unique key in toast message for first login
-        if (showUniqueKey) {
-          setToast({
-            message: `🔐 Your Unique Key: ${uniqueKey}\n\nSave this key securely! You'll need it to decrypt your journal entries.`,
-            type: 'warning',
-            duration: 15000
-          });
+        if (savedAuthData) {
+          try {
+            const parsed = JSON.parse(savedAuthData);
+            // Use saved key if it exists and matches this user
+            if (parsed.user && parsed.user.username === formData.userName) {
+              existingUniqueKey = parsed.uniqueKey;
+            }
+          } catch (e) {
+            console.error('Error parsing saved auth:', e);
+          }
         }
         
+        // Send login request with uniqueKey (if available)
+        const loginPayload = {
+          userName: formData.userName,
+          password: formData.password
+        };
+        
+        // Include uniqueKey if we have it from localStorage
+        if (existingUniqueKey) {
+          loginPayload.uniqueKey = existingUniqueKey;
+        }
+        
+        const response = await authAPI.login(loginPayload);
+
+        const { username, email, roles, uniqueKey, uniqueKeyMissing, showUniqueKey, message } = response.data;
+        const finalUniqueKey = uniqueKey || existingUniqueKey || null;
+        
+        // Login always succeeds - uniqueKey is optional (only needed for decryption)
+        const authData = {
+          isAuthenticated: true,
+          user: { username, email, roles },
+          uniqueKey: finalUniqueKey, // Prefer server key, fallback to saved one
+          isLoading: false
+        };
+        
+        setAuth(authData);
+        
+        // Update localStorage with authenticated status
+        localStorage.setItem('auth_state', JSON.stringify(authData));
+        
+        // If backend generated a new key, show it in modal
+        if (showUniqueKey && uniqueKey) {
+          setKeyMessage(uniqueKey);
+          setShowModal(true);
+          // Don't navigate yet, let user see the key first
+        } else {
+          // Show info message if user logged in without key
+          if (uniqueKeyMissing && !finalUniqueKey) {
+            console.log('[Login] User logged in without a uniqueKey. ' + (message || 'Please use your saved key to encrypt/decrypt entries.'));
+          }
+          // Go to dashboard
         navigate('/dashboard');
+        }
       } else {
-        // Registration Logic
+        // Signup - Show unique key modal ONLY on first account creation
         if (!formData.email) {
           setError('Email is required for registration');
+          setLoading(false);
           return;
         }
 
@@ -87,11 +109,21 @@ const LoginForm = () => {
           email: formData.email
         });
 
-        setSuccess('Account created successfully! Your unique key has been generated.');
-        setKeyMessage(`${response.data.note}\n\nYour Unique Key: ${response.data.uniqueKey}`);
-        setShowModal(true);
+        const { username, email, roles, uniqueKey } = response.data;
         
-        // Reset form
+        // Save the uniqueKey to localStorage immediately so it's available for login
+        const authData = {
+          isAuthenticated: false, // Not logged in yet
+          user: { username, email, roles },
+          uniqueKey: uniqueKey, // Save the key for later use
+          isLoading: false
+        };
+        
+        localStorage.setItem('auth_state', JSON.stringify(authData));
+        
+        // Show the unique key modal
+        setKeyMessage(uniqueKey);
+        setShowModal(true);
         setFormData({ userName: '', password: '', email: '' });
       }
     } catch (err) {
@@ -103,10 +135,12 @@ const LoginForm = () => {
 
   const handleModalClose = () => {
     setShowModal(false);
-    if (isLogin) {
+    // If user is already authenticated (auto-generated key on login), go to dashboard
+    if (auth.isAuthenticated) {
       navigate('/dashboard');
     } else {
-      setIsLogin(true); // Switch to login after successful registration
+    // After signup, switch to login tab so user can sign in
+    setIsLogin(true);
     }
   };
 
@@ -114,22 +148,28 @@ const LoginForm = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1 className="login-title">My Journal App</h1>
+          <h1 className="login-title">🔐 My Secure Journal</h1>
           <p className="login-subtitle">
-            {isLogin ? 'Welcome back! Please sign in to your account.' : 'Create your account to get started.'}
+            {isLogin ? 'Welcome back! Sign in to access your journal.' : 'Create your account to start journaling securely.'}
           </p>
         </div>
 
         <div className="login-tabs">
           <button 
             className={`tab-button ${isLogin ? 'active' : ''}`}
-            onClick={() => setIsLogin(true)}
+            onClick={() => {
+              setIsLogin(true);
+              setError('');
+            }}
           >
             Sign In
           </button>
           <button 
             className={`tab-button ${!isLogin ? 'active' : ''}`}
-            onClick={() => setIsLogin(false)}
+            onClick={() => {
+              setIsLogin(false);
+              setError('');
+            }}
           >
             Sign Up
           </button>
@@ -137,7 +177,6 @@ const LoginForm = () => {
 
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="alert alert-error">{error}</div>}
-          {success && <div className="alert alert-success">{success}</div>}
 
           <div className="form-group">
             <label className="form-label">Username</label>
@@ -177,6 +216,7 @@ const LoginForm = () => {
               className="form-input"
               placeholder="Enter your password"
               required
+              minLength={6}
             />
           </div>
 
@@ -189,34 +229,12 @@ const LoginForm = () => {
             {isLogin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
-
-        <div className="login-footer">
-          <p>
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button 
-              type="button"
-              className="link-button"
-              onClick={() => setIsLogin(!isLogin)}
-            >
-              {isLogin ? 'Sign up here' : 'Sign in here'}
-            </button>
-          </p>
-        </div>
       </div>
 
       {showModal && (
-        <UniqueKeyDisplay 
-          message={keyMessage}
+        <UniqueKeyModal 
+          uniqueKey={keyMessage}
           onClose={handleModalClose}
-        />
-      )}
-      
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          duration={toast.duration}
-          onClose={() => setToast(null)}
         />
       )}
     </div>
@@ -224,3 +242,4 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
+

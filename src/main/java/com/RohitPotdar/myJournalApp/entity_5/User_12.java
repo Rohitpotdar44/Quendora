@@ -5,6 +5,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +24,8 @@ public class User_12 {
     @NonNull
     private String password;
     private String email;
-    private String uniqueKey; // Generated using email ID
+    @JsonIgnore
+    private String uniqueKeyHash;
     private boolean isFirstLogin; // To track if user needs to see the unique key
     private List<String> roles;
 

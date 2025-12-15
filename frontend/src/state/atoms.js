@@ -1,6 +1,22 @@
 import { atom } from 'recoil';
 
-// Authentication state atom
+// Recoil persistence effect
+const localStorageEffect = (key) => ({ setSelf, onSet }) => {
+  const savedValue = localStorage.getItem(key);
+  if (savedValue != null) {
+    setSelf(JSON.parse(savedValue));
+  }
+
+  onSet((newValue, _, isReset) => {
+    if (isReset) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, JSON.stringify(newValue));
+    }
+  });
+};
+
+// Authentication state - persists across refresh
 export const authState = atom({
   key: 'authState',
   default: {
@@ -9,9 +25,17 @@ export const authState = atom({
     uniqueKey: null,
     isLoading: false,
   },
+  effects: [localStorageEffect('auth_state')],
 });
 
-// UI state atoms
+// Journal entries state - persists across refresh
+export const journalEntriesState = atom({
+  key: 'journalEntriesState',
+  default: [],
+  effects: [localStorageEffect('journal_entries')],
+});
+
+// UI state atoms (don't persist)
 export const showUniqueKeyModal = atom({
   key: 'showUniqueKeyModal',
   default: false,
@@ -22,8 +46,3 @@ export const uniqueKeyMessage = atom({
   default: '',
 });
 
-// Journal entries state (for future use)
-export const journalEntriesState = atom({
-  key: 'journalEntriesState',
-  default: [],
-});

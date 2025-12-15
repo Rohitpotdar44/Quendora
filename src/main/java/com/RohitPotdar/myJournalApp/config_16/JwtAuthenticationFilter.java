@@ -49,6 +49,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // If not a JWT token, try to find user by unique key
                     System.out.println("JWT Filter - Not a JWT token, trying unique key lookup");
                     username = findUserByUniqueKey(token);
+                    
+                    // If still not found, check if token is just a username
+                    if (username == null) {
+                        System.out.println("JWT Filter - Trying direct username lookup");
+                        if (userService.findByUserName(token) != null) {
+                            username = token;
+                            System.out.println("JWT Filter - Token is username: " + username);
+                        }
+                    }
                 }
 
                 if (username != null) {
@@ -78,12 +87,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             List<User_12> allUsers = userService.getAllEntries();
             System.out.println("JWT Filter - Total users found: " + allUsers.size());
             
-            for (User_12 user : allUsers) {
-                System.out.println("JWT Filter - User: " + user.getUserName() + ", Unique Key: " + user.getUniqueKey());
-            }
-            
             String username = allUsers.stream()
-                    .filter(user -> uniqueKey.equals(user.getUniqueKey()))
+                    .filter(user -> userService.matchesUniqueKey(uniqueKey, user.getUniqueKeyHash()))
                     .map(user -> user.getUserName())
                     .findFirst()
                     .orElse(null);

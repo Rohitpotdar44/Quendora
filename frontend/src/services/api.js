@@ -1,33 +1,30 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8087';
-
+// Create axios instance with base configuration
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'http://localhost:8087',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add authentication
+// Request interceptor to add authorization token
 api.interceptors.request.use(
   (config) => {
-    // Try to get JWT token first, then fall back to unique key
-    const token = localStorage.getItem('token');
-    const uniqueKey = localStorage.getItem('uniqueKey');
-    
-    console.log('API Request - Token:', token);
-    console.log('API Request - Unique Key:', uniqueKey);
-    console.log('API Request - URL:', config.url);
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else if (uniqueKey) {
-      // For now, use the unique key as a simple token
-      config.headers.Authorization = `Bearer ${uniqueKey}`;
+    // Try to get auth from localStorage
+    const authState = localStorage.getItem('auth_state');
+    if (authState) {
+      try {
+        const parsed = JSON.parse(authState);
+        // Use uniqueKey if available, otherwise use username for authentication
+        const token = parsed.uniqueKey || parsed.user?.username;
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      } catch (error) {
+        console.error('Error parsing auth state:', error);
+      }
     }
-    
-    console.log('API Request - Authorization Header:', config.headers.Authorization);
     return config;
   },
   (error) => {
@@ -35,26 +32,27 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
+// Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('uniqueKey');
-      localStorage.removeItem('user');
+      // Clear auth data on 401
+      localStorage.removeItem('auth_state');
+      localStorage.removeItem('journal_entries');
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 
-// API methods
+// Auth API endpoints
 export const authAPI = {
-  // Create new user
-  createUser: (userData) => api.post('/public/createUser', userData),
-
   // Login user
   login: (credentials) => api.post('/public/login', credentials),
+
+  // Create new user
+  createUser: (userData) => api.post('/public/createUser', userData),
 
   // Validate unique key
   validateUniqueKey: (uniqueKey) => 
@@ -68,8 +66,9 @@ export const authAPI = {
   createAdmin: (adminData) => api.post('/public/createAdmin', adminData),
 };
 
+// Journal API endpoints
 export const journalAPI = {
-  // Create new journal entry
+  // Create new journal entry (with encryption)
   createEntry: (entryData) => api.post('/journalCopies', entryData),
   
   // Get all journal entries for current user
@@ -78,7 +77,7 @@ export const journalAPI = {
   // Get journal entry by ID
   getEntryById: (id) => api.get(`/journalCopies/id/${id}`),
   
-  // Update journal entry
+  // Update journal entry (with encryption)
   updateEntry: (id, entryData) => api.put(`/journalCopies/id/${id}`, entryData),
   
   // Delete journal entry
@@ -88,9 +87,11 @@ export const journalAPI = {
   decryptEntry: (requestData) => api.post('/journalCopies/decrypt', requestData),
 };
 
+// Admin API endpoints
 export const adminAPI = {
   // Get all users (admin only)
   getAllUsers: () => api.get('/admin/all-entries'),
 };
 
 export default api;
+

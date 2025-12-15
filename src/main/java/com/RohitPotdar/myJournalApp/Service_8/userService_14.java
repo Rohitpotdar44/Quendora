@@ -7,6 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Update;
 
 import java.util.Arrays;
 import java.util.List;
@@ -28,6 +32,9 @@ public class userService_14 {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
     public boolean saveNewUser(User_12 user) {
        try {
            String pwd = user.getPassword();
@@ -37,8 +44,12 @@ public class userService_14 {
                user.setPassword(passwordEncoder.encode(pwd));
            }
 
+           // No plaintext unique key is handled on entity
+
            user.setRoles(Arrays.asList("USER"));
            userRepository_13.save(user);
+           // Double-safety: ensure plaintext field is not present in DB
+           forceUnsetUniqueKey(user.getUserName());
 
            System.out.println("Saved password: " + user.getPassword());
            return true;
@@ -50,6 +61,7 @@ public class userService_14 {
 
     public void saveUser(User_12 user){
         userRepository_13.save(user);
+        forceUnsetUniqueKey(user.getUserName());
     }
 
     public void saveAdmin(User_12 user){
@@ -61,6 +73,7 @@ public class userService_14 {
         }
         user.setRoles(Arrays.asList("USER","ADMIN"));
         userRepository_13.save(user);
+        forceUnsetUniqueKey(user.getUserName());
     }
 
     // basically this method is for saving entries in mongodb as it takes JournalEntry_6 as i/p and saves it in journalEntryRepository_11 (in Mongo Repository)
@@ -161,6 +174,99 @@ public class userService_14 {
      */
     public boolean verifyPassword(String rawPassword, String encodedPassword) {
         return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
+
+    /**
+     * Create a new user and set the uniqueKey hash without storing the plaintext
+     */
+    public boolean saveNewUserWithUniqueKey(User_12 user, String plainUniqueKey) {
+        try {
+            System.out.println("[saveNewUserWithUniqueKey] Starting save for user: " + user.getUserName());
+            
+            String pwd = user.getPassword();
+            if (!pwd.startsWith("$2a$") && !pwd.startsWith("$2b$") && !pwd.startsWith("$2y$")) {
+                System.out.println("[saveNewUserWithUniqueKey] Encoding password...");
+                user.setPassword(passwordEncoder.encode(pwd));
+            }
+            
+            if (plainUniqueKey != null && !plainUniqueKey.isEmpty()) {
+                System.out.println("[saveNewUserWithUniqueKey] Hashing uniqueKey...");
+                user.setUniqueKeyHash(hashUniqueKey(plainUniqueKey));
+            }
+            
+            user.setRoles(Arrays.asList("USER"));
+            System.out.println("[saveNewUserWithUniqueKey] Saving user to database...");
+            
+            User_12 savedUser = userRepository_13.save(user);
+            System.out.println("[saveNewUserWithUniqueKey] User saved with ID: " + savedUser.getId());
+            
+            System.out.println("[saveNewUserWithUniqueKey] Forcing unset of uniqueKey field...");
+            forceUnsetUniqueKey(user.getUserName());
+            
+            System.out.println("[saveNewUserWithUniqueKey] ✅ Successfully saved user: " + user.getUserName());
+            return true;
+        } catch (Exception e) {
+            System.out.println("[saveNewUserWithUniqueKey] ❌ ERROR saving user: " + user.getUserName());
+            System.out.println("[saveNewUserWithUniqueKey] Exception: " + e.getClass().getName());
+            System.out.println("[saveNewUserWithUniqueKey] Message: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Create admin and set the uniqueKey hash without storing the plaintext
+     */
+    public void saveAdminWithUniqueKey(User_12 user, String plainUniqueKey) {
+        String pwd = user.getPassword();
+        if (!pwd.startsWith("$2a$") && !pwd.startsWith("$2b$") && !pwd.startsWith("$2y$")) {
+            user.setPassword(passwordEncoder.encode(pwd));
+        }
+        if (plainUniqueKey != null && !plainUniqueKey.isEmpty()) {
+            user.setUniqueKeyHash(hashUniqueKey(plainUniqueKey));
+        }
+        user.setRoles(Arrays.asList("USER","ADMIN"));
+        userRepository_13.save(user);
+        forceUnsetUniqueKey(user.getUserName());
+    }
+
+    /**
+     * Update only the stored uniqueKey hash for an existing user
+     */
+    public void updateUniqueKeyHash(User_12 user, String plainUniqueKey) {
+        if (plainUniqueKey != null && !plainUniqueKey.isEmpty()) {
+            user.setUniqueKeyHash(hashUniqueKey(plainUniqueKey));
+        }
+        userRepository_13.save(user);
+        forceUnsetUniqueKey(user.getUserName());
+
+    }
+
+    private void forceUnsetUniqueKey(String userName) {
+        try {
+            Query q = new Query(Criteria.where("userName").is(userName));
+            Update u = new Update().unset("uniqueKey");
+            mongoTemplate.updateFirst(q, u, User_12.class);
+        } catch (Exception ignored) {
+            // best-effort cleanup
+        }
+    }
+
+    /**
+     * Hash a unique key using the application's password encoder (BCrypt)
+     */
+    public String hashUniqueKey(String uniqueKey) {
+        return passwordEncoder.encode(uniqueKey);
+    }
+
+    /**
+     * Verify a provided unique key against the stored hash
+     */
+    public boolean matchesUniqueKey(String rawUniqueKey, String storedHash) {
+        if (storedHash == null) {
+            return false;
+        }
+        return passwordEncoder.matches(rawUniqueKey, storedHash);
     }
     
     /**

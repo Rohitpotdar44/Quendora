@@ -3,18 +3,26 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { RecoilRoot } from 'recoil';
 import LoginForm from './components/Login/LoginForm';
 import Dashboard from './components/Dashboard/Dashboard';
-import AdminPanel from './components/Admin/AdminPanel';
-import { isAuthenticated, isAdmin } from './utils/auth';
+import DebugPanel from './components/DebugPanel';
 import './App.css';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  return isAuthenticated() ? children : <Navigate to="/login" />;
-};
-
-// Admin Route Component
-const AdminRoute = ({ children }) => {
-  return isAuthenticated() && isAdmin() ? children : <Navigate to="/dashboard" />;
+  const authData = localStorage.getItem('auth_state');
+  
+  if (!authData) {
+    return <Navigate to="/login" />;
+  }
+  
+  try {
+    const parsed = JSON.parse(authData);
+    const isAuthenticated = parsed.isAuthenticated === true;
+  return isAuthenticated ? children : <Navigate to="/login" />;
+  } catch (error) {
+    // Invalid auth data, clear it and redirect
+    localStorage.removeItem('auth_state');
+    return <Navigate to="/login" />;
+  }
 };
 
 function App() {
@@ -25,7 +33,7 @@ function App() {
           <Routes>
             <Route 
               path="/login" 
-              element={isAuthenticated() ? <Navigate to="/dashboard" /> : <LoginForm />} 
+              element={<LoginForm />} 
             />
             <Route 
               path="/dashboard" 
@@ -36,14 +44,10 @@ function App() {
               } 
             />
             <Route 
-              path="/admin" 
-              element={
-                <AdminRoute>
-                  <AdminPanel />
-                </AdminRoute>
-              } 
+              path="/debug" 
+              element={<DebugPanel />} 
             />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/" element={<Navigate to="/login" />} />
           </Routes>
         </div>
       </Router>
@@ -52,3 +56,4 @@ function App() {
 }
 
 export default App;
+
