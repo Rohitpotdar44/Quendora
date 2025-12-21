@@ -15,6 +15,26 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 public class userServiceTests {
 
+    @org.junit.jupiter.api.BeforeEach
+    public void setupUsers() {
+        if (userRepository13.findByUserName("Arsalan") == null) {
+            User_12 arsalan = User_12.builder()
+                .userName("Arsalan")
+                .password("password")
+                .email("arsalan@email.com")
+                .build();
+            userRepository13.save(arsalan);
+        }
+        if (userRepository13.findByUserName("Sanket") == null) {
+            User_12 sanket = User_12.builder()
+                .userName("Sanket")
+                .password("password")
+                .email("sanket@email.com")
+                .build();
+            userRepository13.save(sanket);
+        }
+    }
+
     @Autowired
     private userRepository_13 userRepository13;
     @Autowired

@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children }) => {
   try {
     const parsed = JSON.parse(authData);
     const isAuthenticated = parsed.isAuthenticated === true;
-  return isAuthenticated ? children : <Navigate to="/login" />;
+    return isAuthenticated ? children : <Navigate to="/login" />;
   } catch (error) {
     // Invalid auth data, clear it and redirect
     localStorage.removeItem('auth_state');

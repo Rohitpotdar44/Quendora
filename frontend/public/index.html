@@ -7,9 +7,25 @@
     <meta name="theme-color" content="#000000" />
     <meta
       name="description"
-      content="Secure Journal App with End-to-End Encryption"
+      content="Quendora - Your secure vault for documents, memories, and private thoughts with End-to-End Encryption"
     />
-    <title>My Secure Journal</title>
+    <!-- Google Fonts - Montserrat -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <title>Quendora - Secure Journal</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  window.onload = function() {
+    google.accounts.id.initialize({
+      client_id: '99693803741-c84m6mjmnbtc1pbj9g1b3lb0tuapjf8l.apps.googleusercontent.com.apps.googleusercontent.com', // Replace with your actual client ID
+      callback: handleCredentialResponse
+    });
+    // Optionally show the One Tap prompt on load:
+    // google.accounts.id.prompt();
+  }
+</script>
+
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

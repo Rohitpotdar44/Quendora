@@ -11,7 +11,7 @@
 
 .create-entry .card-header {
   padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 50%, #FFA500 100%);
   color: white;
 }
 
@@ -57,8 +57,8 @@
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #FF8C42;
+  box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.15);
 }
 
 .form-textarea {
@@ -72,6 +72,18 @@
   font-size: 12px;
   color: #718096;
   text-align: right;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #FF8C42;
+  font-weight: 500;
+  padding: 0.5rem;
+  background: #fff5e6;
+  border-left: 3px solid #FF8C42;
+  border-radius: 4px;
 }
 
 .form-actions {

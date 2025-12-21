@@ -84,6 +84,14 @@ public class SecurityConfig_17 extends WebSecurityConfigurerAdapter
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         
+        // IMPORTANT: Expose custom headers so frontend can read them!
+        configuration.setExposedHeaders(Arrays.asList(
+            "X-Decrypted-Title",
+            "X-Decrypted-FileName",
+            "X-Decrypted-Size",
+            "Content-Disposition"
+        ));
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

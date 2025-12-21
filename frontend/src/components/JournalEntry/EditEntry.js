@@ -4,11 +4,11 @@ import { authState } from '../../state/atoms';
 import { journalAPI } from '../../services/api';
 import './CreateEntry.css';
 
-const CreateEntry = ({ onSave, onCancel }) => {
+const EditEntry = ({ entry, onSave, onCancel }) => {
   const auth = useRecoilValue(authState);
   const [formData, setFormData] = useState({
-    title: '',
-    content: '',
+    title: entry.title || '',
+    content: entry.content || '',
     uniqueKey: ''
   });
   const [loading, setLoading] = useState(false);
@@ -31,38 +31,36 @@ const CreateEntry = ({ onSave, onCancel }) => {
     }
 
     if (!formData.uniqueKey.trim()) {
-      setError('Please enter your unique key to encrypt this entry');
+      setError('Please enter your unique key to re-encrypt this entry');
       return;
     }
 
     setLoading(true);
     
     try {
-      console.log('[CreateEntry] Preparing to send entry...');
-      console.log('[CreateEntry] Title:', formData.title.trim());
-      console.log('[CreateEntry] Content length:', formData.content.trim().length);
-      console.log('[CreateEntry] Has uniqueKey:', !!formData.uniqueKey);
+      console.log('[EditEntry] Updating entry:', entry.id);
+      console.log('[EditEntry] New Title:', formData.title.trim());
+      console.log('[EditEntry] New Content length:', formData.content.trim().length);
       
       const requestData = {
         entry: {
-        title: formData.title.trim(),
-        content: formData.content.trim()
+          title: formData.title.trim(),
+          content: formData.content.trim()
         },
         uniqueKey: formData.uniqueKey.trim()
       };
 
-      console.log('[CreateEntry] Sending to backend:', requestData);
+      console.log('[EditEntry] Sending to backend:', requestData);
       
-      const response = await journalAPI.createEntry(requestData);
+      const response = await journalAPI.updateEntry(entry.id, requestData);
       
-      console.log('[CreateEntry] ✅ Backend response:', response.data);
+      console.log('[EditEntry] ✅ Backend response:', response.data);
       
       onSave();
-      setFormData({ title: '', content: '', uniqueKey: '' });
     } catch (err) {
-      console.error('[CreateEntry] ❌ Full error:', err);
-      console.error('[CreateEntry] ❌ Error response:', err.response);
-      setError(err.response?.data || 'Failed to create entry. Please try again.');
+      console.error('[EditEntry] ❌ Full error:', err);
+      console.error('[EditEntry] ❌ Error response:', err.response);
+      setError(err.response?.data || 'Failed to update entry. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -72,8 +70,8 @@ const CreateEntry = ({ onSave, onCancel }) => {
     <div className="create-entry">
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">✍️ Create New Entry</h3>
-          <p className="card-subtitle">Your entry will be encrypted with your unique key</p>
+          <h3 className="card-title">✏️ Edit Entry</h3>
+          <p className="card-subtitle">Your changes will be re-encrypted with your unique key</p>
         </div>
 
         <form onSubmit={handleSubmit} className="create-entry-form">
@@ -112,18 +110,18 @@ const CreateEntry = ({ onSave, onCancel }) => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">🔑 Unique Key (Required for Encryption)</label>
+            <label className="form-label">🔑 Unique Key (Required to Re-encrypt)</label>
             <input
               type="password"
               name="uniqueKey"
               value={formData.uniqueKey}
               onChange={handleInputChange}
               className="form-input"
-              placeholder="Enter your unique key to encrypt this entry..."
+              placeholder="Enter your unique key to save changes..."
               required
             />
             <small className="form-hint">
-              ⚠️ Your entry will be encrypted with this key. You'll need it to decrypt later.
+              ⚠️ Your changes will be re-encrypted with this key.
             </small>
           </div>
 
@@ -142,7 +140,7 @@ const CreateEntry = ({ onSave, onCancel }) => {
               disabled={loading || !formData.title.trim() || !formData.content.trim() || !formData.uniqueKey.trim()}
             >
               {loading && <span className="loading-spinner"></span>}
-              🔒 Encrypt & Save Entry
+              🔒 Re-encrypt & Save
             </button>
           </div>
         </form>
@@ -151,5 +149,5 @@ const CreateEntry = ({ onSave, onCancel }) => {
   );
 };
 
-export default CreateEntry;
+export default EditEntry;
 

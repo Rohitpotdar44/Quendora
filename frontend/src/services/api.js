@@ -16,8 +16,9 @@ api.interceptors.request.use(
     if (authState) {
       try {
         const parsed = JSON.parse(authState);
-        // Use uniqueKey if available, otherwise use username for authentication
-        const token = parsed.uniqueKey || parsed.user?.username;
+        // ONLY use username for authentication (NEVER send uniqueKey as Bearer token)
+        // uniqueKey is only for encryption/decryption, not authentication
+        const token = parsed.user?.username;
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -91,6 +92,30 @@ export const journalAPI = {
 export const adminAPI = {
   // Get all users (admin only)
   getAllUsers: () => api.get('/admin/all-entries'),
+};
+
+// File API endpoints
+export const fileAPI = {
+  // Upload file with encryption (multipart/form-data)
+  uploadFile: (formData) => api.post('/api/files/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  
+  // Get all user files metadata
+  getAllFiles: () => api.get('/api/files'),
+  
+  // Decrypt only metadata (title, filename, size)
+  decryptMetadata: (fileId, secretKey) =>
+    api.post(`/api/files/metadata/${fileId}`, { secretKey }),
+  
+  // Decrypt and download file
+  decryptFile: (fileId, secretKey) => 
+    api.post(`/api/files/decrypt/${fileId}`, { secretKey }, {
+      responseType: 'blob'
+    }),
+  
+  // Delete file
+  deleteFile: (fileId) => api.delete(`/api/files/${fileId}`)
 };
 
 export default api;

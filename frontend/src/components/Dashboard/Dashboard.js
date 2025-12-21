@@ -5,14 +5,20 @@ import { authState, journalEntriesState } from '../../state/atoms';
 import { journalAPI } from '../../services/api';
 import CreateEntry from '../JournalEntry/CreateEntry';
 import EntryCard from '../JournalEntry/EntryCard';
+import FileBrowser from '../FileManager/FileBrowser';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const [auth, setAuth] = useRecoilState(authState);
   const [entries, setEntries] = useRecoilState(journalEntriesState);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [activeTab, setActiveTab] = useState('entries');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Restore active tab from localStorage
+    return localStorage.getItem('dashboard_active_tab') || 'entries';
+  });
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest');
   
   const navigate = useNavigate();
 
@@ -105,11 +111,9 @@ const Dashboard = () => {
     console.log('[Dashboard] ✅ Entry created successfully, refreshing list...');
     setShowCreateForm(false);
     
-    // Wait for backend to persist, then reload
-    setTimeout(async () => {
+    // Immediately reload entries
       console.log('[Dashboard] Reloading entries from backend...');
       await loadEntries();
-    }, 1000); // Increased timeout to ensure backend persistence
   };
 
   const handleDeleteEntry = async (entryId) => {
@@ -122,6 +126,40 @@ const Dashboard = () => {
       alert('Failed to delete entry');
     }
   };
+
+  // Filter and sort entries
+  const getFilteredAndSortedEntries = () => {
+    let filtered = [...entries];
+
+    // Filter by search query (searches in title and content - case insensitive)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(entry => {
+        const title = (entry.title || '').toLowerCase();
+        const content = (entry.content || '').toLowerCase();
+        return title.includes(query) || content.includes(query);
+      });
+    }
+
+    // Sort entries
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.localDateTime);
+      const dateB = new Date(b.localDateTime);
+      
+      if (sortOrder === 'newest') {
+        return dateB - dateA;
+      } else if (sortOrder === 'oldest') {
+        return dateA - dateB;
+      } else if (sortOrder === 'title') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      return 0;
+    });
+
+    return filtered;
+  };
+
+  const filteredEntries = getFilteredAndSortedEntries();
 
   if (!auth.user) {
     return (
@@ -138,8 +176,9 @@ const Dashboard = () => {
       <header className="dashboard-header">
         <div className="header-content">
           <div className="header-left">
-            <h1 className="dashboard-title">📖 My Secure Journal</h1>
-            <p className="welcome-text">Welcome back, <strong>{auth.user.username}</strong>!</p>
+            <h1 className="dashboard-title">🔐 Quendora</h1>
+            <p className="dashboard-subtitle">Your secure vault for documents, memories, and private thoughts</p>
+            <p className="welcome-text">Welcome back, <strong>{auth.user.username}</strong> !</p>
           </div>
           <div className="header-right">
             <div className="user-info">
@@ -165,13 +204,28 @@ const Dashboard = () => {
         <div className="nav-content">
           <button 
             className={`nav-tab ${activeTab === 'entries' ? 'active' : ''}`}
-            onClick={() => setActiveTab('entries')}
+            onClick={() => {
+              setActiveTab('entries');
+              localStorage.setItem('dashboard_active_tab', 'entries');
+            }}
           >
             📝 My Entries
           </button>
           <button 
+            className={`nav-tab ${activeTab === 'files' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('files');
+              localStorage.setItem('dashboard_active_tab', 'files');
+            }}
+          >
+            📁 My Files
+          </button>
+          <button 
             className={`nav-tab ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
+            onClick={() => {
+              setActiveTab('profile');
+              localStorage.setItem('dashboard_active_tab', 'profile');
+            }}
           >
             👤 Profile
           </button>
@@ -185,12 +239,7 @@ const Dashboard = () => {
             <div className="entries-section">
               <div className="section-header">
                 <h2 className="section-title">Journal Entries</h2>
-                <button 
-                  onClick={() => setShowCreateForm(true)}
-                  className="btn btn-primary create-btn"
-                >
-                  ✍️ New Entry
-                </button>
+               
               </div>
               
               {showCreateForm && (
@@ -198,6 +247,49 @@ const Dashboard = () => {
                   onSave={handleCreateEntry}
                   onCancel={() => setShowCreateForm(false)}
                 />
+              )}
+
+              {/* Search and Filter Controls */}
+              {entries.length > 0 && !loading && (
+                <div className="entries-controls">
+                   <button 
+                  onClick={() => setShowCreateForm(true)}
+                  className="btn btn-primary create-btn"
+                >
+                  ✍️ New Entry
+                </button>
+                  {/* <div className="search-box">
+                    <input
+                      type="text"
+                      placeholder="🔍 Search entries..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="search-input"
+                    />
+                    {searchQuery && (
+                      <button 
+                        onClick={() => setSearchQuery('')}
+                        className="clear-search"
+                        title="Clear search"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div> */}
+                  <div className="sort-controls">
+                    <label htmlFor="sort-select">Sort by:</label>
+                    <select 
+                      id="sort-select"
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value)}
+                      className="sort-select"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                      <option value="title">Title (A-Z)</option>
+                    </select>
+                  </div>
+                </div>
               )}
               
               <div className="entries-list">
@@ -218,16 +310,35 @@ const Dashboard = () => {
                       Create Your First Entry
                     </button>
                   </div>
+                ) : filteredEntries.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">🔍</div>
+                    <h3>No Matching Entries</h3>
+                    <p>Try a different search term or clear the search.</p>
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="btn btn-secondary"
+                    >
+                      Clear Search
+                    </button>
+                  </div>
                 ) : (
-                  entries.map(entry => (
+                  filteredEntries.map(entry => (
                     <EntryCard 
                       key={entry.id}
                       entry={entry}
                       onDelete={handleDeleteEntry}
+                      onEdit={loadEntries}
                     />
                   ))
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'files' && (
+            <div className="files-section">
+              <FileBrowser />
             </div>
           )}
 

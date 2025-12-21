@@ -4,9 +4,25 @@ import { useRecoilState } from 'recoil';
 import { authAPI } from '../../services/api';
 import { authState, showUniqueKeyModal, uniqueKeyMessage } from '../../state/atoms';
 import UniqueKeyModal from './UniqueKeyModal';
+import Lottie from 'lottie-react';
+import secureLoginAnimation from '../../lotties/Secure Login.json';
 import './LoginForm.css';
+import './GoogleOneTapHandler';
+
+import { useEffect } from 'react';
 
 const LoginForm = () => {
+  useEffect(() => {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      window.google.accounts.id.initialize({
+        client_id: '99693803741-94qcgo3ql9r83ae650oh252eo3mk42ga.apps.googleusercontent.com', // <-- UPDATED: New Google OAuth client ID
+        callback: window.handleCredentialResponse
+      });
+      // Optionally: Uncomment to trigger One Tap immediately on mount:
+      // window.google.accounts.id.prompt();
+    }
+  }, []);
+
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     userName: '',
@@ -145,18 +161,24 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="login-container">
+    <div className="login-page-container">
+      {/* Left Side - Form Card */}
+      <div className="login-form-section">
       <div className="login-card">
-        <div className="login-header">
-          <h1 className="login-title">🔐 My Secure Journal</h1>
-          <p className="login-subtitle">
-            {isLogin ? 'Welcome back! Sign in to access your journal.' : 'Create your account to start journaling securely.'}
-          </p>
+          {/* Header */}
+          <div className="brand-header">
+            <div className="brand-logo">
+              <span className="lock-icon">🔐</span>
+              <h1 className="brand-name">Quendora</h1>
+            </div>
+            <p className="brand-tagline">Your secure vault for documents, memories, and private thoughts</p>
+            <p className="welcome-text">Welcome back! Sign in to access your journal.</p>
         </div>
 
-        <div className="login-tabs">
+          {/* Tab Switcher */}
+          <div className="auth-tabs">
           <button 
-            className={`tab-button ${isLogin ? 'active' : ''}`}
+              className={`auth-tab ${isLogin ? 'active' : ''}`}
             onClick={() => {
               setIsLogin(true);
               setError('');
@@ -165,7 +187,7 @@ const LoginForm = () => {
             Sign In
           </button>
           <button 
-            className={`tab-button ${!isLogin ? 'active' : ''}`}
+              className={`auth-tab ${!isLogin ? 'active' : ''}`}
             onClick={() => {
               setIsLogin(false);
               setError('');
@@ -175,62 +197,121 @@ const LoginForm = () => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          {error && <div className="alert alert-error">{error}</div>}
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="auth-form">
+            {error && <div className="error-alert">{error}</div>}
 
-          <div className="form-group">
-            <label className="form-label">Username</label>
+            {/* Username */}
+            <div className="input-group">
+              <label className="input-label">Username</label>
+              <div className="input-field">
+                <span className="field-icon">👤</span>
             <input
               type="text"
               name="userName"
               value={formData.userName}
               onChange={handleInputChange}
-              className="form-input"
+                  className="text-input"
               placeholder="Enter your username"
               required
             />
+              </div>
           </div>
 
+            {/* Email (Sign Up only) */}
           {!isLogin && (
-            <div className="form-group">
-              <label className="form-label">Email</label>
+              <div className="input-group">
+                <label className="input-label">Email</label>
+                <div className="input-field">
+                  <span className="field-icon">📧</span>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="form-input"
+                    className="text-input"
                 placeholder="Enter your email"
                 required
               />
+                </div>
             </div>
           )}
 
-          <div className="form-group">
-            <label className="form-label">Password</label>
+            {/* Password */}
+            <div className="input-group">
+              <label className="input-label">Password</label>
+              <div className="input-field password-field">
+                <span className="field-icon">🔒</span>
             <input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className="form-input"
+                  className="text-input"
               placeholder="Enter your password"
               required
               minLength={6}
             />
+                {isLogin && (
+                  <a href="#forgot" className="forgot-password-link" onClick={(e) => e.preventDefault()}>
+                    Forgot password?
+                  </a>
+                )}
+              </div>
           </div>
 
+            {/* Submit Button */}
           <button 
             type="submit" 
-            className="btn btn-primary login-button"
+              className="submit-button"
             disabled={loading}
           >
-            {loading && <span className="loading-spinner"></span>}
-            {isLogin ? 'Sign In' : 'Create Account'}
-          </button>
+              {loading ? '⏳ Processing...' : isLogin ? 'Sign In' : 'Create Account'}
+            </button>
         </form>
+        </div>
       </div>
 
+      {/* Right Side - Lottie Animation & Feature Cards */}
+      <div className="login-features-section">
+        {/* Lottie Animation */}
+        <div className="lottie-container">
+          <Lottie 
+            animationData={secureLoginAnimation} 
+            loop={true}
+            style={{ width: '100%', height: '100%', maxWidth: '600px' }}
+          />
+        </div>
+
+        {/* Feature Cards */}
+        <div className="feature-cards">
+          <div className="feature-card">
+            <div className="feature-icon yellow">🔒</div>
+            <div className="feature-text">
+              <h3>End-to-End Encryption</h3>
+              <p>Your data is encrypted to keep it safe and private.</p>
+            </div>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon blue">🛡️</div>
+            <div className="feature-text">
+              <h3>Secure Storage</h3>
+              <p>Safeguard your files with our secure storage solution.</p>
+            </div>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon yellow">🔐</div>
+            <div className="feature-text">
+              <h3>Private & Confidential</h3>
+              <p>We ensure your data remains private and confidential.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Unique Key Modal */}
       {showModal && (
         <UniqueKeyModal 
           uniqueKey={keyMessage}
@@ -242,4 +323,3 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
-

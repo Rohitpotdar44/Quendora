@@ -84,27 +84,16 @@
                 List<JournalEntry_6> allEntries = byUserName.getAllEntries();
                 System.out.println("[GET /journalCopies] User has " + allEntries.size() + " entries");
                 
-                // Extract unique key from Authorization header (if present)
-                String providedUniqueKey = extractBearerToken(authorization);
-                boolean hasValidUniqueKey = providedUniqueKey != null
-                        && userService14.matchesUniqueKey(providedUniqueKey, byUserName.getUniqueKeyHash());
+                // ALWAYS return encrypted entries by default
+                // Entries should only be decrypted on the frontend when user explicitly unlocks them
+                System.out.println("[GET /journalCopies] Returning " + allEntries.size() + " ENCRYPTED entries");
                 
-                if ((decrypt || hasValidUniqueKey) && !hasValidUniqueKey) {
-                    return ResponseEntity.badRequest().body("Provide your unique key using the Bearer token header to view decrypted entries.");
+                if (allEntries != null && !allEntries.isEmpty()) {
+                    return new ResponseEntity<>(allEntries, HttpStatus.OK);
                 }
                 
-                if (hasValidUniqueKey && allEntries != null && !allEntries.isEmpty()) {
-                    System.out.println("[GET /journalCopies] ✅ Valid uniqueKey provided - returning decrypted entries");
-                    List<JournalEntry_6> decrypted = decryptEntriesWithUserKey(allEntries, providedUniqueKey);
-                    return new ResponseEntity<>(decrypted, HttpStatus.OK);
-                }
-
-            if ( allEntries!=null && ! allEntries.isEmpty()){
-                System.out.println("[GET /journalCopies] Returning " + allEntries.size() + " entries");
-                return new ResponseEntity<>(allEntries,HttpStatus.OK);
-            }
-            System.out.println("[GET /journalCopies] No entries found, returning empty list");
-            return new ResponseEntity<>(allEntries,HttpStatus.OK);
+                System.out.println("[GET /journalCopies] No entries found, returning empty list");
+                return new ResponseEntity<>(allEntries, HttpStatus.OK);
             
             } catch (Exception e) {
                 System.out.println("[GET /journalCopies] ===== ERROR =====");

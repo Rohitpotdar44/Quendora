@@ -2,16 +2,20 @@ import React, { useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { authState } from '../../state/atoms';
 import { journalAPI } from '../../services/api';
+import EditEntry from './EditEntry';
+import ConfirmDialog from '../Common/ConfirmDialog';
 import './EntryCard.css';
 
-const EntryCard = ({ entry, onDelete }) => {
+const EntryCard = ({ entry, onDelete, onEdit }) => {
   const auth = useRecoilValue(authState);
   const [isDecrypted, setIsDecrypted] = useState(false);
   const [decryptedContent, setDecryptedContent] = useState({ title: '', content: '' });
   const [showUnlockForm, setShowUnlockForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [uniqueKeyInput, setUniqueKeyInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown date';
@@ -85,14 +89,49 @@ const EntryCard = ({ entry, onDelete }) => {
   };
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    setShowDeleteConfirm(false);
       onDelete(entry.id);
+  };
+
+  const handleEdit = () => {
+    // Can only edit if decrypted
+    if (isDecrypted) {
+      setShowEditForm(true);
+    } else {
+      setError('Please decrypt the entry first to edit it');
+    }
+  };
+
+  const handleEditSave = () => {
+    setShowEditForm(false);
+    setIsDecrypted(false);
+    setDecryptedContent({ title: '', content: '' });
+    if (onEdit) {
+      onEdit();
     }
   };
 
   const locked = isEncrypted(entry.title) || isEncrypted(entry.content);
   const displayTitle = isDecrypted ? decryptedContent.title : (locked ? '🔒 [Encrypted Entry]' : entry.title);
   const displayContent = isDecrypted ? decryptedContent.content : entry.content;
+
+  if (showEditForm && isDecrypted) {
+    return (
+      <EditEntry 
+        entry={{
+          ...entry,
+          title: decryptedContent.title,
+          content: decryptedContent.content
+        }}
+        onSave={handleEditSave}
+        onCancel={() => setShowEditForm(false)}
+      />
+    );
+  }
 
   return (
     <div className="entry-card">
@@ -102,10 +141,11 @@ const EntryCard = ({ entry, onDelete }) => {
           {locked && !isDecrypted && (
             <button 
               onClick={() => setShowUnlockForm(!showUnlockForm)}
-              className="action-btn unlock-btn"
-              title="Unlock entry"
+              className="btn-unlock-fancy"
+              title="Click to unlock and view entry"
             >
-              🔓
+              <span className="unlock-icon">🔓</span>
+              <span className="unlock-text">Unlock Entry</span>
             </button>
           )}
           {locked && isDecrypted && (
@@ -114,7 +154,16 @@ const EntryCard = ({ entry, onDelete }) => {
               className="action-btn lock-btn"
               title="Lock entry again"
           >
-              🔒
+              🔒 Lock
+          </button>
+          )}
+          {isDecrypted && (
+            <button 
+              onClick={handleEdit}
+              className="action-btn edit-btn"
+              title="Edit entry"
+            >
+              ✏️ Edit
           </button>
           )}
           <button 
@@ -122,7 +171,7 @@ const EntryCard = ({ entry, onDelete }) => {
             className="action-btn delete-btn"
             title="Delete entry"
           >
-            🗑️
+            🗑️ Delete
           </button>
         </div>
       </div>
@@ -136,7 +185,13 @@ const EntryCard = ({ entry, onDelete }) => {
               value={uniqueKeyInput}
               onChange={(e) => setUniqueKeyInput(e.target.value)}
               className="form-input"
-              placeholder="Leave empty to use saved key"
+              placeholder="Enter your unique key and press Enter"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleUnlock();
+                }
+              }}
+              autoFocus
             />
             {error && <div className="alert alert-error">{error}</div>}
             <div className="unlock-actions">
@@ -183,6 +238,14 @@ const EntryCard = ({ entry, onDelete }) => {
           <span className="unlocked-badge">🔓 Unlocked</span>
           )}
       </div>
+
+      <ConfirmDialog
+        show={showDeleteConfirm}
+        title="Delete Entry"
+        message="Are you sure you want to delete this entry? This action cannot be undone."
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 };
