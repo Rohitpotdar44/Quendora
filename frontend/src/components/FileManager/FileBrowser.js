@@ -122,7 +122,6 @@ const FileBrowser = () => {
       {/* Header */}
       <div className="browser-header">
         <div className="header-left">
-          <h2 className="section-title">📁 My Files</h2>
           <p className="section-subtitle">
             All your encrypted files in one place
           </p>
