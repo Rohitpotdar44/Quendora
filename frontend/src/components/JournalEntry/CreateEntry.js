@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { authState } from '../../state/atoms';
 import { journalAPI } from '../../services/api';
+import { rewriteWithAI } from '../../services/aiService';
 import './CreateEntry.css';
 
 const CreateEntry = ({ onSave, onCancel }) => {
@@ -12,6 +13,7 @@ const CreateEntry = ({ onSave, onCancel }) => {
     uniqueKey: ''
   });
   const [loading, setLoading] = useState(false);
+  const [rewriting, setRewriting] = useState(false);
   const [error, setError] = useState('');
 
   const handleInputChange = (e) => {
@@ -20,6 +22,42 @@ const CreateEntry = ({ onSave, onCancel }) => {
       [e.target.name]: e.target.value
     });
     setError('');
+  };
+
+  const handleRewriteWithAI = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      setError('Please enter both title and content to rewrite with AI');
+      return;
+    }
+
+    if (formData.content.trim().length < 10) {
+      setError('Content should be at least 10 characters long to rewrite');
+      return;
+    }
+
+    setRewriting(true);
+    setError('');
+
+    try {
+      console.log('[CreateEntry] Rewriting with AI...');
+      const result = await rewriteWithAI(formData.title, formData.content);
+      
+      if (result && result.title && result.content) {
+        setFormData({
+          ...formData,
+          title: result.title,
+          content: result.content
+        });
+        console.log('[CreateEntry] ✅ Successfully rewritten with AI');
+      } else {
+        setError('Failed to rewrite with AI. Please try again.');
+      }
+    } catch (err) {
+      console.error('[CreateEntry] ❌ Error rewriting with AI:', err);
+      setError('Failed to rewrite with AI. Please check your OpenAI API key configuration.');
+    } finally {
+      setRewriting(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -110,6 +148,32 @@ const CreateEntry = ({ onSave, onCancel }) => {
               {formData.content.length}/2000 characters
             </small>
           </div>
+
+          {/* Rewrite with AI Button */}
+          {formData.title.trim() && formData.content.trim() && formData.content.trim().length >= 10 && (
+            <div className="form-group">
+              <button
+                type="button"
+                onClick={handleRewriteWithAI}
+                disabled={rewriting || loading}
+                className="btn btn-ai-rewrite"
+              >
+                {rewriting ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    ✨ AI is Rewriting...
+                  </>
+                ) : (
+                  <>
+                    ✨ Rewrite with AI
+                  </>
+                )}
+              </button>
+              <small className="form-hint ai-rewrite-hint">
+                💡 Improve grammar, clarity, and flow while keeping your original meaning
+              </small>
+            </div>
+          )}
 
           <div className="form-group">
             <label className="form-label">🔑 Unique Key (Required for Encryption)</label>

@@ -49,7 +49,7 @@ public class SecurityConfig_17 extends WebSecurityConfigurerAdapter
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
                 .antMatchers("/public/**").permitAll()
-                .antMatchers("/journalCopies/**", "/users/**")
+                .antMatchers("/journalCopies/**", "/users/**", "/api/ai/**", "/api/files/**")
                 .authenticated()
                 .antMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().permitAll()

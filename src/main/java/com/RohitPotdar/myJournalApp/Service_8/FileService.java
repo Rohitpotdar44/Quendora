@@ -216,9 +216,9 @@ public class FileService {
     }
 
     /**
-     * Delete a file if the user owns it.
+     * Delete a file if the user owns it and secret key is valid.
      */
-    public boolean deleteFile(String fileId, String userName) {
+    public boolean deleteFile(String fileId, String userName, String secretKey) {
         SecureFile file = secureFileRepository.findById(fileId).orElse(null);
         
         if (file == null) {
@@ -228,6 +228,45 @@ public class FileService {
         // Check ownership
         if (!userName.equals(file.getUserName())) {
             throw new IllegalArgumentException("You can only delete your own files.");
+        }
+        
+        // Validate secret key - it must match the user's unique key hash
+        if (secretKey == null || secretKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("Secret key is required for deletion");
+        }
+        
+        // Get user and validate secret key against uniqueKeyHash (same as journal entries)
+        User_12 user = userService14.findByUserName(userName);
+        if (user == null) {
+            throw new IllegalStateException("User not found.");
+        }
+        
+        String userUniqueKeyHash = user.getUniqueKeyHash();
+        if (userUniqueKeyHash == null || userUniqueKeyHash.isEmpty()) {
+            throw new IllegalArgumentException("User does not have a unique key set");
+        }
+        
+        // Verify the secret key matches the user's stored unique key hash
+        if (!userService14.matchesUniqueKey(secretKey.trim(), userUniqueKeyHash)) {
+            throw new IllegalArgumentException("Invalid secret key. Deletion denied.");
+        }
+        
+        // Additional validation: Try to decrypt file metadata to ensure key works
+        try {
+            if (file.getEncryptedTitle() != null && file.getTitleIv() != null && file.getTitleSalt() != null) {
+                decryptTextField(file.getEncryptedTitle(), file.getTitleIv(), file.getTitleSalt(), secretKey.trim());
+            } else if (file.getEncryptedData() != null && file.getIv() != null && file.getSalt() != null) {
+                // For files without encrypted title, verify by attempting to decrypt file data
+                CryptoService.EncryptedPayload payload = new CryptoService.EncryptedPayload(
+                        file.getEncryptedData(),
+                        file.getIv(),
+                        file.getSalt()
+                );
+                cryptoService.decrypt(payload, secretKey.trim());
+            }
+        } catch (Exception e) {
+            // If decryption also fails, the key is definitely wrong
+            throw new IllegalArgumentException("Invalid secret key. Deletion denied.");
         }
         
         secureFileRepository.delete(file);

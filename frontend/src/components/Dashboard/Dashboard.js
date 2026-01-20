@@ -116,14 +116,16 @@ const Dashboard = () => {
       await loadEntries();
   };
 
-  const handleDeleteEntry = async (entryId) => {
+  const handleDeleteEntry = async (entryId, uniqueKey) => {
     try {
-      await journalAPI.deleteEntry(entryId);
+      await journalAPI.deleteEntry(entryId, uniqueKey);
       console.log('[Dashboard] Entry deleted, refreshing...');
       await loadEntries();
     } catch (error) {
       console.error('[Dashboard] Failed to delete entry:', error);
-      alert('Failed to delete entry');
+      const errorMessage = error.response?.data || 'Failed to delete entry';
+      alert(errorMessage);
+      throw error; // Re-throw so EntryCard can handle it
     }
   };
 

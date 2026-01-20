@@ -16,6 +16,8 @@ const EntryCard = ({ entry, onDelete, onEdit }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteKeyInput, setDeleteKeyInput] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown date';
@@ -89,12 +91,29 @@ const EntryCard = ({ entry, onDelete, onEdit }) => {
   };
 
   const handleDelete = () => {
+    setDeleteKeyInput('');
+    setDeleteError('');
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+    const keyToUse = deleteKeyInput.trim() || auth.uniqueKey;
+    
+    if (!keyToUse) {
+      setDeleteError('Please enter your unique key to delete this entry');
+      return;
+    }
+
+    setDeleteError('');
     setShowDeleteConfirm(false);
-      onDelete(entry.id);
+    
+    try {
+      await onDelete(entry.id, keyToUse);
+      setDeleteKeyInput('');
+    } catch (err) {
+      setDeleteError('Failed to delete entry. Please check your unique key.');
+      console.error('[EntryCard] Delete error:', err);
+    }
   };
 
   const handleEdit = () => {
@@ -106,10 +125,18 @@ const EntryCard = ({ entry, onDelete, onEdit }) => {
     }
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = (updatedContent) => {
     setShowEditForm(false);
-    setIsDecrypted(false);
-    setDecryptedContent({ title: '', content: '' });
+    if (updatedContent) {
+      setDecryptedContent({
+        title: updatedContent.title,
+        content: updatedContent.content
+      });
+      setIsDecrypted(true);
+    } else {
+      setIsDecrypted(false);
+      setDecryptedContent({ title: '', content: '' });
+    }
     if (onEdit) {
       onEdit();
     }
@@ -239,13 +266,55 @@ const EntryCard = ({ entry, onDelete, onEdit }) => {
           )}
       </div>
 
-      <ConfirmDialog
-        show={showDeleteConfirm}
-        title="Delete Entry"
-        message="Are you sure you want to delete this entry? This action cannot be undone."
-        onConfirm={confirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-      />
+      {showDeleteConfirm && (
+        <div className="confirm-overlay">
+          <div className="confirm-dialog">
+            <div className="confirm-header">
+              <h3>Delete Entry</h3>
+            </div>
+            <div className="confirm-body">
+              <p>Are you sure you want to delete this entry? This action cannot be undone.</p>
+              <div style={{ marginTop: '1rem' }}>
+                <label htmlFor="delete-key" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+                  Enter your unique key to confirm deletion:
+                </label>
+                <input
+                  id="delete-key"
+                  type="password"
+                  value={deleteKeyInput}
+                  onChange={(e) => {
+                    setDeleteKeyInput(e.target.value);
+                    setDeleteError('');
+                  }}
+                  placeholder={auth.uniqueKey ? 'Enter key (or use saved key)' : 'Enter your unique key'}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: deleteError ? '2px solid #e74c3c' : '2px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '0.9rem'
+                  }}
+                />
+                {deleteError && (
+                  <p style={{ color: '#e74c3c', fontSize: '0.85rem', marginTop: '0.5rem' }}>{deleteError}</p>
+                )}
+              </div>
+            </div>
+            <div className="confirm-actions">
+              <button onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteKeyInput('');
+                setDeleteError('');
+              }} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} className="btn btn-danger">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

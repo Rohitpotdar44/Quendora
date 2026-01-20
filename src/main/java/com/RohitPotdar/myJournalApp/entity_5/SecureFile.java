@@ -53,6 +53,18 @@ public class SecureFile {
     // Plaintext file size for display (not sensitive info)
     private String displayFileSize;
 
+    // AI-derived metadata (optional)
+    private String aiSummary;
+    private java.util.List<String> aiTags;
+    private String aiCaption;
+    private String aiOcrText;
+    private String aiSearchText;
+    private String aiHighlights;
+    private String aiSuggestedName;
+    private String aiTranscript;
+    private java.util.List<String> aiWarnings;
+    private LocalDateTime aiUpdatedAt;
+
     private LocalDateTime createdAt;
 }
 

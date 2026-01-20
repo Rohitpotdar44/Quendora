@@ -144,6 +144,10 @@
                System.out.println("[POST /journalCopies] Entry saved successfully!");
                
                return new ResponseEntity<>(myEntry, HttpStatus.OK);
+           } catch (IllegalArgumentException e) {
+               // Catch validation errors (invalid key, missing key, etc.)
+               System.out.println("[POST /journalCopies] Validation error: " + e.getMessage());
+               return ResponseEntity.badRequest().body(e.getMessage());
            } catch (Exception e) {
                System.out.println("[POST /journalCopies] ===== ERROR =====");
                System.out.println("[POST /journalCopies] Exception: " + e.getClass().getName());
@@ -211,16 +215,33 @@
         // so now we are fixing this
         // main logic is written in services del method
         @DeleteMapping("id/{myId}")
-        public ResponseEntity<?> deleteEntryById(@PathVariable ObjectId myId ) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication(); // get that authenticated user
-            String userName = authentication.getName();
+        public ResponseEntity<?> deleteEntryById(@PathVariable ObjectId myId, 
+                                                  @RequestBody Map<String, String> request) {
+            try {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication(); // get that authenticated user
+                String userName = authentication.getName();
 
-            boolean removed= journalEntryService_10.deleteEntry(myId,userName);
-            if(removed){
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            }
-            else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                // Secret key (uniqueKey) is compulsory for deletion
+                String uniqueKey = request.get("uniqueKey");
+                if (uniqueKey == null || uniqueKey.trim().isEmpty()) {
+                    return ResponseEntity.badRequest().body("Unique key is required for deletion");
+                }
+
+                boolean removed = journalEntryService_10.deleteEntry(myId, userName, uniqueKey.trim());
+                if(removed){
+                    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+                }
+                else {
+                    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                }
+            } catch (IllegalArgumentException e) {
+                // Catch validation errors (invalid key, missing key, etc.)
+                return ResponseEntity.badRequest().body(e.getMessage());
+            } catch (Exception e) {
+                // Catch any other unexpected errors
+                System.err.println("[JournalEntryController] Error deleting entry: " + e.getMessage());
+                e.printStackTrace();
+                return ResponseEntity.badRequest().body("Failed to delete entry: " + e.getMessage());
             }
         }
 
@@ -230,39 +251,62 @@
                 @PathVariable ObjectId myId,
                 @RequestBody Map<String, Object> request
         ) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String userName = authentication.getName();
-            User_12 user = userService14.findByUserName(userName);
-            List<JournalEntry_6> collect = user.getAllEntries().stream().filter(x -> x.getId().equals(myId)).collect(Collectors.toList());
-            
-            if(!collect.isEmpty()){
-                Optional<JournalEntry_6> journalEntry_6 = journalEntryService_10.findById(myId);
-                if (journalEntry_6.isPresent()) {
-                    // Extract data from request
-                    Map<String, String> entryData = (Map<String, String>) request.get("entry");
-                    String uniqueKey = (String) request.get("uniqueKey");
-                    
-                    if (uniqueKey == null || uniqueKey.isEmpty()) {
-                        return ResponseEntity.badRequest().body("Unique key is required to encrypt updates");
+            try {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                String userName = authentication.getName();
+                User_12 user = userService14.findByUserName(userName);
+                List<JournalEntry_6> collect = user.getAllEntries().stream().filter(x -> x.getId().equals(myId)).collect(Collectors.toList());
+                
+                if(!collect.isEmpty()){
+                    Optional<JournalEntry_6> journalEntry_6 = journalEntryService_10.findById(myId);
+                    if (journalEntry_6.isPresent()) {
+                        // Extract data from request
+                        Map<String, String> entryData = (Map<String, String>) request.get("entry");
+                        String uniqueKey = (String) request.get("uniqueKey");
+                        
+                        if (entryData == null) {
+                            return ResponseEntity.badRequest().body("Entry data is required");
+                        }
+
+                        if (uniqueKey == null || uniqueKey.isEmpty()) {
+                            return ResponseEntity.badRequest().body("Unique key is required to encrypt updates");
+                        }
+                        
+                        JournalEntry_6 old = journalEntry_6.get();
+                        
+                        // CRITICAL: Always replace with plaintext from request to avoid re-encrypting encrypted values
+                        // Frontend sends decrypted/plaintext values from EditEntry form
+                        // We MUST replace even if null/empty, otherwise we'll try to encrypt already-encrypted data
+                        String newTitle = entryData.get("title");
+                        String newContent = entryData.get("content");
+                        
+                        // Always set title/content from request (even if empty) to ensure we have plaintext
+                        old.setTitle(newTitle != null ? newTitle : "");
+                        old.setContent(newContent != null ? newContent : "");
+                        
+                        System.out.println("[PUT /journalCopies/id] Title from request: " + (newTitle != null ? newTitle.substring(0, Math.min(50, newTitle.length())) : "null"));
+                        System.out.println("[PUT /journalCopies/id] Content from request: " + (newContent != null ? "length=" + newContent.length() : "null"));
+                        
+                        // Save with encryption (validates key and encrypts the plaintext values)
+                        journalEntryService_10.saveEntry(old, userName, uniqueKey);
+                        return new ResponseEntity<>(old, HttpStatus.OK);
                     }
-                    
-                    JournalEntry_6 old = journalEntry_6.get();
-                    
-                    // Update with new encrypted content
-                    if (entryData.get("title") != null && !entryData.get("title").isEmpty()) {
-                        old.setTitle(entryData.get("title"));
-                    }
-                    
-                    if (entryData.get("content") != null && !entryData.get("content").isEmpty()) {
-                        old.setContent(entryData.get("content"));
-                    }
-                    
-                    // Save with encryption
-                    journalEntryService_10.saveEntry(old, userName, uniqueKey);
-                    return new ResponseEntity<>(old, HttpStatus.OK);
                 }
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            } catch (IllegalArgumentException e) {
+                // Catch validation errors (invalid key, missing key, etc.)
+                System.err.println("[JournalEntryController] Validation error updating entry: " + e.getMessage());
+                return ResponseEntity.badRequest().body(e.getMessage());
+            } catch (IllegalStateException e) {
+                // Catch state errors (user not found, etc.)
+                System.err.println("[JournalEntryController] State error updating entry: " + e.getMessage());
+                return ResponseEntity.badRequest().body(e.getMessage());
+            } catch (Exception e) {
+                System.err.println("[JournalEntryController] Error updating entry: " + e.getMessage());
+                System.err.println("[JournalEntryController] Exception type: " + e.getClass().getName());
+                e.printStackTrace();
+                return ResponseEntity.badRequest().body("Failed to update entry: " + e.getMessage());
             }
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
         private String extractBearerToken(String authorization) {

@@ -11,6 +11,9 @@ const FileBrowser = () => {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [filterType, setFilterType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [aiSearchIds, setAiSearchIds] = useState(null);
+  const [aiSearchLoading, setAiSearchLoading] = useState(false);
+  const [aiSearchError, setAiSearchError] = useState('');
 
   useEffect(() => {
     loadFiles();
@@ -42,17 +45,19 @@ const FileBrowser = () => {
     loadFiles();
   };
 
-  const handleDelete = async (fileId) => {
+  const handleDelete = async (fileId, secretKey) => {
     try {
       console.log('[FileBrowser] Deleting file:', fileId);
-      await fileAPI.deleteFile(fileId);
+      await fileAPI.deleteFile(fileId, secretKey);
       console.log('[FileBrowser] ✅ File deleted');
       
       // Remove from local state
       setFiles(files.filter(f => f.id !== fileId));
     } catch (err) {
       console.error('[FileBrowser] ❌ Failed to delete file:', err);
-      alert('Failed to delete file. Please try again.');
+      const errorMessage = err.response?.data || 'Failed to delete file. Please try again.';
+      alert(errorMessage);
+      throw err; // Re-throw so FileCard can handle it
     }
   };
 
@@ -91,6 +96,19 @@ const FileBrowser = () => {
       return dateB - dateA;
     });
 
+    const searchTerm = searchQuery.trim().toLowerCase();
+    if (searchTerm) {
+      filtered = filtered.filter(file => {
+        const title = (file.plaintextTitle || file.originalFileName || file.aiSuggestedName || '').toLowerCase();
+        const searchText = (file.aiSearchText || '').toLowerCase();
+        const matchesLocal = title.includes(searchTerm) || searchText.includes(searchTerm);
+        const matchesAi = Array.isArray(aiSearchIds) ? aiSearchIds.includes(file.id) : false;
+        return matchesLocal || matchesAi;
+      });
+    } else if (Array.isArray(aiSearchIds)) {
+      filtered = filtered.filter(file => aiSearchIds.includes(file.id));
+    }
+
     return filtered;
   };
 
@@ -115,6 +133,34 @@ const FileBrowser = () => {
           return false;
       }
     }).length;
+  };
+
+  const handleAiSearch = async () => {
+    if (!searchQuery.trim()) {
+      setAiSearchIds(null);
+      setAiSearchError('');
+      return;
+    }
+
+    setAiSearchLoading(true);
+    setAiSearchError('');
+    try {
+      const response = await fileAPI.searchFiles(searchQuery.trim());
+      const ids = (response.data || []).map(file => file.id);
+      setAiSearchIds(ids);
+    } catch (err) {
+      console.error('[FileBrowser] AI search failed:', err);
+      setAiSearchError('AI search failed. Please try again.');
+      setAiSearchIds([]);
+    } finally {
+      setAiSearchLoading(false);
+    }
+  };
+
+  const clearAiSearch = () => {
+    setSearchQuery('');
+    setAiSearchIds(null);
+    setAiSearchError('');
   };
 
   return (
@@ -170,7 +216,34 @@ const FileBrowser = () => {
             📝 Documents ({getFileTypeCount('documents')})
           </button>
         </div>
+        <div className="filter-search">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search inside files (OCR/text)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleAiSearch}
+            disabled={aiSearchLoading}
+          >
+            {aiSearchLoading ? 'Searching...' : 'Search Content'}
+          </button>
+          {aiSearchIds && (
+            <button className="btn btn-sm" onClick={clearAiSearch}>
+              Clear
+            </button>
+          )}
+        </div>
       </div>
+
+      {aiSearchError && (
+        <div className="alert alert-error">
+          {aiSearchError}
+        </div>
+      )}
 
       {/* Error message */}
       {error && (

@@ -1,5 +1,6 @@
 package com.RohitPotdar.myJournalApp.controller_2;
 
+import com.RohitPotdar.myJournalApp.Service_8.PasswordResetService;
 import com.RohitPotdar.myJournalApp.Service_8.userService_14;
 import com.RohitPotdar.myJournalApp.entity_5.User_12;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,9 @@ public class PublicController_19 {
 
     @Autowired
     private userService_14 userService_14;
+
+    @Autowired
+    private PasswordResetService passwordResetService;
     
     @Value("${admin.creation.key}")
     private String validAdminKey;
@@ -26,6 +30,61 @@ public class PublicController_19 {
     @GetMapping("/health-check")  // here health check is the endpoint
     public String healthCheck() {
         return "OK";
+    }
+
+    @PostMapping("/forgot-password/request")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Email is required");
+            }
+            passwordResetService.sendResetCode(email.trim());
+            // Always return OK to avoid user enumeration
+            return ResponseEntity.ok(Map.of("message", "If the email exists, a reset code has been sent."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to send reset code: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/forgot-password/verify")
+    public ResponseEntity<?> verifyResetCode(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            String code = request.get("code");
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Email is required");
+            }
+            if (code == null || code.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Reset code is required");
+            }
+            passwordResetService.verifyCode(email.trim(), code.trim());
+            return ResponseEntity.ok(Map.of("message", "Code verified"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            String code = request.get("code");
+            String newPassword = request.get("newPassword");
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Email is required");
+            }
+            if (code == null || code.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Reset code is required");
+            }
+            if (newPassword == null || newPassword.trim().length() < 6) {
+                return ResponseEntity.badRequest().body("Password must be at least 6 characters");
+            }
+            passwordResetService.resetPassword(email.trim(), code.trim(), newPassword.trim());
+            return ResponseEntity.ok(Map.of("message", "Password reset successful"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
 

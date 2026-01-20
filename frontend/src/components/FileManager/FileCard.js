@@ -14,6 +14,15 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
   const [decryptedMetadata, setDecryptedMetadata] = useState(null);
   const [decryptedTitle, setDecryptedTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteKeyInput, setDeleteKeyInput] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiKeyInput, setAiKeyInput] = useState('');
+  const [aiInsights, setAiInsights] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const isVideo = file?.contentType?.startsWith('video/');
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown date';
@@ -173,12 +182,30 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
   };
 
   const handleDelete = () => {
+    setDeleteKeyInput('');
+    setDeleteError('');
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+    const keyToUse = deleteKeyInput.trim() || uniqueKeyInput.trim() || auth.uniqueKey;
+    
+    if (!keyToUse) {
+      setDeleteError('Please enter your secret key to delete this file');
+      return;
+    }
+
+    setDeleteError('');
     setShowDeleteConfirm(false);
-    onDelete(file.id);
+    
+    try {
+      await onDelete(file.id, keyToUse);
+      setDeleteKeyInput('');
+    } catch (err) {
+      setDeleteError('Failed to delete file. Please check your secret key.');
+      console.error('[FileCard] Delete error:', err);
+      setShowDeleteConfirm(true); // Re-show dialog on error
+    }
   };
 
   const closePreview = () => {
@@ -187,6 +214,27 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
     }
     setDecryptedMetadata(null);
     setDecryptedTitle('');
+  };
+
+  const handleAiAnalyze = async () => {
+    const keyToUse = aiKeyInput.trim() || uniqueKeyInput.trim() || auth.uniqueKey;
+    if (!keyToUse) {
+      setAiError('Please enter your unique key for AI analysis.');
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const response = await fileAPI.analyzeFile(file.id, keyToUse);
+      setAiInsights(response.data);
+      setShowAiPanel(true);
+    } catch (err) {
+      console.error('[FileCard] ❌ AI analysis failed:', err);
+      setAiError(err.response?.data || 'AI analysis failed. Please try again.');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   return (
@@ -335,16 +383,154 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
           >
             🗑️ Delete
           </button>
+          <button
+            onClick={() => setShowAiPanel(!showAiPanel)}
+            className="action-btn ai-btn"
+            title="AI Insights"
+          >
+            ✨ AI Insights
+          </button>
         </div>
+
+        {showAiPanel && (
+          <div className="ai-panel">
+            <div className="ai-panel-header">
+              <h5>✨ AI Insights</h5>
+              <button className="ai-close-btn" onClick={() => setShowAiPanel(false)}>✕</button>
+            </div>
+
+            <div className="ai-panel-body">
+              <div className="form-group">
+                <label className="form-label">🔑 Unique Key (required)</label>
+                <input
+                  type="password"
+                  value={aiKeyInput}
+                  onChange={(e) => setAiKeyInput(e.target.value)}
+                  className="form-input"
+                  placeholder="Enter your unique key"
+                />
+              </div>
+
+              <button
+                className="btn btn-primary btn-sm ai-run-btn"
+                onClick={handleAiAnalyze}
+                disabled={aiLoading}
+              >
+                {aiLoading ? '⏳ Analyzing...' : 'Run AI Analysis'}
+              </button>
+
+              {aiError && <div className="alert alert-error">{aiError}</div>}
+
+              {aiInsights && (
+                <div className="ai-results">
+                  {!isVideo && aiInsights.summary && (
+                    <div className="ai-block">
+                      <strong>Summary</strong>
+                      <p>{aiInsights.summary}</p>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.tags && aiInsights.tags.length > 0 && (
+                    <div className="ai-block">
+                      <strong>Tags</strong>
+                      <div className="ai-tags">
+                        {aiInsights.tags.map((tag, idx) => (
+                          <span key={idx} className="ai-tag">#{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.caption && (
+                    <div className="ai-block">
+                      <strong>Image Caption</strong>
+                      <p>{aiInsights.caption}</p>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.highlights && (
+                    <div className="ai-block">
+                      <strong>Video Highlights</strong>
+                      <p style={{ whiteSpace: 'pre-line' }}>{aiInsights.highlights}</p>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.transcript && (
+                    <div className="ai-block">
+                      <strong>Full Transcript</strong>
+                      <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem', maxHeight: '200px', overflowY: 'auto' }}>
+                        {aiInsights.transcript}
+                      </p>
+                    </div>
+                  )}
+                  {aiInsights.suggestedFileName && (
+                    <div className="ai-block">
+                      <strong>Suggested File Name</strong>
+                      <p>{aiInsights.suggestedFileName}</p>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.warnings && aiInsights.warnings.length > 0 && (
+                    <div className="ai-block ai-warnings">
+                      <strong>Notes</strong>
+                      <ul>
+                        {aiInsights.warnings.map((w, idx) => (
+                          <li key={idx}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <ConfirmDialog
-        show={showDeleteConfirm}
-        title="Delete File"
-        message="Are you sure you want to delete this file? This action cannot be undone."
-        onConfirm={confirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-      />
+      {showDeleteConfirm && (
+        <div className="confirm-overlay">
+          <div className="confirm-dialog">
+            <div className="confirm-header">
+              <h3>Delete File</h3>
+            </div>
+            <div className="confirm-body">
+              <p>Are you sure you want to delete this file? This action cannot be undone.</p>
+              <div style={{ marginTop: '1rem' }}>
+                <label htmlFor="delete-file-key" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+                  Enter your secret key to confirm deletion:
+                </label>
+                <input
+                  id="delete-file-key"
+                  type="password"
+                  value={deleteKeyInput}
+                  onChange={(e) => {
+                    setDeleteKeyInput(e.target.value);
+                    setDeleteError('');
+                  }}
+                  placeholder={auth.uniqueKey ? 'Enter key (or use saved key)' : 'Enter your secret key'}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: deleteError ? '2px solid #e74c3c' : '2px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '0.9rem'
+                  }}
+                />
+                {deleteError && (
+                  <p style={{ color: '#e74c3c', fontSize: '0.85rem', marginTop: '0.5rem' }}>{deleteError}</p>
+                )}
+              </div>
+            </div>
+            <div className="confirm-actions">
+              <button onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteKeyInput('');
+                setDeleteError('');
+              }} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} className="btn btn-danger">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

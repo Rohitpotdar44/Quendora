@@ -65,6 +65,12 @@ export const authAPI = {
 
   // Create admin (if needed)
   createAdmin: (adminData) => api.post('/public/createAdmin', adminData),
+
+  // Forgot password flow
+  requestResetCode: (email) => api.post('/public/forgot-password/request', { email }),
+  verifyResetCode: (email, code) => api.post('/public/forgot-password/verify', { email, code }),
+  resetPassword: (email, code, newPassword) =>
+    api.post('/public/forgot-password/reset', { email, code, newPassword }),
 };
 
 // Journal API endpoints
@@ -81,8 +87,8 @@ export const journalAPI = {
   // Update journal entry (with encryption)
   updateEntry: (id, entryData) => api.put(`/journalCopies/id/${id}`, entryData),
   
-  // Delete journal entry
-  deleteEntry: (id) => api.delete(`/journalCopies/id/${id}`),
+  // Delete journal entry (requires uniqueKey in request body)
+  deleteEntry: (id, uniqueKey) => api.delete(`/journalCopies/id/${id}`, { data: { uniqueKey } }),
   
   // Decrypt journal entry content
   decryptEntry: (requestData) => api.post('/journalCopies/decrypt', requestData),
@@ -114,8 +120,21 @@ export const fileAPI = {
       responseType: 'blob'
     }),
   
-  // Delete file
-  deleteFile: (fileId) => api.delete(`/api/files/${fileId}`)
+  // Delete file (requires secretKey in request body)
+  deleteFile: (fileId, secretKey) => api.delete(`/api/files/${fileId}`, { data: { secretKey } }),
+
+  // AI analyze file (summary, tags, OCR/search, captions, highlights)
+  analyzeFile: (fileId, secretKey) =>
+    api.post(`/api/files/ai/analyze/${fileId}`, { secretKey }),
+
+  // AI search files by extracted content
+  searchFiles: (query) => api.get('/api/files/ai/search', { params: { q: query } })
+};
+
+// AI API endpoints (uses backend proxy for security)
+export const aiAPI = {
+  // Rewrite title and content with AI
+  rewrite: (title, content) => api.post('/api/ai/rewrite', { title, content }),
 };
 
 export default api;

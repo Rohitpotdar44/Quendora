@@ -1,5 +1,6 @@
 package com.RohitPotdar.myJournalApp.controller_2;
 
+import com.RohitPotdar.myJournalApp.Service_8.FileAIService;
 import com.RohitPotdar.myJournalApp.Service_8.FileService;
 import com.RohitPotdar.myJournalApp.entity_5.SecureFile;
 import org.springframework.http.HttpHeaders;
@@ -24,9 +25,11 @@ import java.util.Map;
 public class FileController {
 
     private final FileService fileService;
+    private final FileAIService fileAIService;
 
-    public FileController(FileService fileService) {
+    public FileController(FileService fileService, FileAIService fileAIService) {
         this.fileService = fileService;
+        this.fileAIService = fileAIService;
     }
 
     /**
@@ -126,18 +129,58 @@ public class FileController {
     }
 
     /**
-     * Delete a file by ID (only if user owns it).
+     * Delete a file by ID (only if user owns it and secret key is provided).
      */
     @DeleteMapping("/{fileId}")
-    public ResponseEntity<?> deleteFile(@PathVariable String fileId, Authentication authentication) {
+    public ResponseEntity<?> deleteFile(@PathVariable String fileId,
+                                        @RequestBody SecretKeyRequest request,
+                                        Authentication authentication) {
         try {
             String userName = authentication.getName();
-            boolean deleted = fileService.deleteFile(fileId, userName);
+            
+            // Secret key is compulsory for deletion
+            if (request.secretKey() == null || request.secretKey().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Secret key is required for deletion");
+            }
+            
+            boolean deleted = fileService.deleteFile(fileId, userName, request.secretKey().trim());
             if (deleted) {
                 return ResponseEntity.ok(Map.of("message", "File deleted successfully"));
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("File not found or not authorized");
             }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Run AI analysis on a decrypted file (summary, tags, OCR/search text, captions, highlights).
+     */
+    @PostMapping("/ai/analyze/{fileId}")
+    public ResponseEntity<?> analyzeFile(@PathVariable String fileId,
+                                         @RequestBody SecretKeyRequest request,
+                                         Authentication authentication) {
+        try {
+            String userName = authentication.getName();
+            FileAIService.FileAIResult result = fileAIService.analyzeFile(fileId, request.secretKey(), userName);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Search files by extracted text content (OCR/text extraction must be run at least once).
+     */
+    @GetMapping("/ai/search")
+    public ResponseEntity<?> searchFiles(@RequestParam("q") String query,
+                                         Authentication authentication) {
+        try {
+            String userName = authentication.getName();
+            return ResponseEntity.ok(fileAIService.searchFilesByContent(userName, query));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

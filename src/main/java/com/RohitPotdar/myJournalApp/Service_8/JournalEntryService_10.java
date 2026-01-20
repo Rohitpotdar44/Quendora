@@ -49,20 +49,41 @@ public class JournalEntryService_10 {
        try {
            System.out.println("[saveEntry] Starting save for user: " + userName);
            
-           // Encrypt the title and content with user's unique key
+           // Validate unique key against user's stored hash BEFORE encryption
+           if (userUniqueKey == null || userUniqueKey.trim().isEmpty()) {
+               throw new IllegalArgumentException("Unique key is required for encryption");
+           }
+           
+           User_12 user = userService14.findByUserName(userName);
+           if (user == null) {
+               throw new IllegalStateException("User not found");
+           }
+           
+           String userUniqueKeyHash = user.getUniqueKeyHash();
+           if (userUniqueKeyHash == null || userUniqueKeyHash.isEmpty()) {
+               throw new IllegalArgumentException("User does not have a unique key set");
+           }
+           
+           // Verify the unique key matches the user's stored hash
+           if (!userService14.matchesUniqueKey(userUniqueKey.trim(), userUniqueKeyHash)) {
+               throw new IllegalArgumentException("Invalid unique key. Please use the correct key for encryption.");
+           }
+           
+           System.out.println("[saveEntry] Unique key validated successfully");
+           
+           // Encrypt the title and content with user's unique key (now validated)
            if (journalEntry_6.getTitle() != null && !journalEntry_6.getTitle().isEmpty()) {
-               String encryptedTitle = encryptWithUserKey(journalEntry_6.getTitle(), userUniqueKey);
+               String encryptedTitle = encryptWithUserKey(journalEntry_6.getTitle(), userUniqueKey.trim());
                journalEntry_6.setTitle(encryptedTitle);
                System.out.println("[saveEntry] Title encrypted");
            }
            
            if (journalEntry_6.getContent() != null && !journalEntry_6.getContent().isEmpty()) {
-               String encryptedContent = encryptWithUserKey(journalEntry_6.getContent(), userUniqueKey);
+               String encryptedContent = encryptWithUserKey(journalEntry_6.getContent(), userUniqueKey.trim());
                journalEntry_6.setContent(encryptedContent);
                System.out.println("[saveEntry] Content encrypted");
            }
            
-           User_12 user = userService14.findByUserName(userName);
            System.out.println("[saveEntry] Found user, current entries: " + user.getAllEntries().size());
            
            JournalEntry_6 saved = journalEntryRepository_11.save(journalEntry_6);
@@ -78,10 +99,18 @@ public class JournalEntryService_10 {
            userService14.saveUser(user);
            System.out.println("[saveEntry] User saved successfully");
            
+       } catch (IllegalArgumentException e) {
+           // Re-throw validation errors (invalid key, missing key, etc.)
+           System.out.println("[saveEntry] Validation error: " + e.getMessage());
+           throw e;
+       } catch (IllegalStateException e) {
+           // Re-throw state errors (user not found, etc.)
+           System.out.println("[saveEntry] State error: " + e.getMessage());
+           throw e;
        } catch (RuntimeException e) {
            System.out.println("[saveEntry] ERROR: " + e.getMessage());
            e.printStackTrace();
-           throw new RuntimeException("An error occurred while saving the entry: " + e);
+           throw new RuntimeException("An error occurred while saving the entry: " + e.getMessage());
        }
     }
     // basically this method is for saving entries in mongodb as it takes JournalEntry_6 as i/p and saves it in journalEntryRepository_11 (in Mongo Repository)
@@ -139,10 +168,26 @@ public class JournalEntryService_10 {
 
     // to avoid cascading
     @Transactional
-    public boolean deleteEntry(ObjectId id, String userName){
+    public boolean deleteEntry(ObjectId id, String userName, String uniqueKey){
        boolean removed=false;
         try{
             User_12 user = userService14.findByUserName(userName);
+            
+            // Validate unique key before deletion
+            if (uniqueKey == null || uniqueKey.trim().isEmpty()) {
+                throw new IllegalArgumentException("Unique key is required for deletion");
+            }
+            
+            // Verify the unique key matches the user's stored hash
+            String userUniqueKeyHash = user.getUniqueKeyHash();
+            if (userUniqueKeyHash == null || userUniqueKeyHash.isEmpty()) {
+                throw new IllegalArgumentException("User does not have a unique key set");
+            }
+            
+            if (!userService14.matchesUniqueKey(uniqueKey, userUniqueKeyHash)) {
+                throw new IllegalArgumentException("Invalid unique key. Deletion denied.");
+            }
+            
              removed = user.getAllEntries().removeIf(x -> x.getId().equals(id));
             if(removed){
                 userService14.saveUser(user);
@@ -150,9 +195,12 @@ public class JournalEntryService_10 {
             }
         }
 
+       catch (IllegalArgumentException e) {
+            throw e; // Re-throw validation errors
+        }
        catch (RuntimeException e) {
             System.out.println(e);
-            throw new RuntimeException("An error occured while saving the entry" +e);
+            throw new RuntimeException("An error occured while deleting the entry: " + e.getMessage());
         }
         return removed;
     }

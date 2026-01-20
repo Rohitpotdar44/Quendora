@@ -242,6 +242,14 @@ public class userService_14 {
 
     }
 
+    public void updatePassword(User_12 user, String newPassword) {
+        if (newPassword == null || newPassword.trim().length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword.trim()));
+        userRepository_13.save(user);
+    }
+
     private void forceUnsetUniqueKey(String userName) {
         try {
             Query q = new Query(Criteria.where("userName").is(userName));

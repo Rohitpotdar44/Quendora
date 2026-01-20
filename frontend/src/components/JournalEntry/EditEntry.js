@@ -56,7 +56,10 @@ const EditEntry = ({ entry, onSave, onCancel }) => {
       
       console.log('[EditEntry] ✅ Backend response:', response.data);
       
-      onSave();
+      onSave({
+        title: formData.title.trim(),
+        content: formData.content.trim()
+      });
     } catch (err) {
       console.error('[EditEntry] ❌ Full error:', err);
       console.error('[EditEntry] ❌ Error response:', err.response);

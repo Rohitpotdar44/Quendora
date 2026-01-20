@@ -31,6 +31,16 @@ const LoginForm = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showForgotFlow, setShowForgotFlow] = useState(false);
+  const [forgotStep, setForgotStep] = useState('email');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotCode, setForgotCode] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotMessage, setForgotMessage] = useState('');
   
   const [auth, setAuth] = useRecoilState(authState);
   const [showModal, setShowModal] = useRecoilState(showUniqueKeyModal);
@@ -149,6 +159,63 @@ const LoginForm = () => {
     }
   };
 
+  const handleForgotRequest = async () => {
+    setForgotLoading(true);
+    setForgotError('');
+    setForgotMessage('');
+    try {
+      const response = await authAPI.requestResetCode(forgotEmail.trim());
+      setForgotMessage(response.data?.message || 'Reset code sent.');
+      setForgotStep('code');
+    } catch (err) {
+      setForgotError(err.response?.data || 'Failed to send reset code.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleForgotVerify = async () => {
+    setForgotLoading(true);
+    setForgotError('');
+    try {
+      const response = await authAPI.verifyResetCode(forgotEmail.trim(), forgotCode.trim());
+      setForgotMessage(response.data?.message || 'Code verified.');
+      setForgotStep('reset');
+    } catch (err) {
+      setForgotError(err.response?.data || 'Invalid code.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleForgotReset = async () => {
+    setForgotLoading(true);
+    setForgotError('');
+    if (forgotNewPassword.trim().length < 6) {
+      setForgotError('Password must be at least 6 characters.');
+      setForgotLoading(false);
+      return;
+    }
+    if (forgotNewPassword.trim() !== forgotConfirmPassword.trim()) {
+      setForgotError('Passwords do not match.');
+      setForgotLoading(false);
+      return;
+    }
+    try {
+      const response = await authAPI.resetPassword(
+        forgotEmail.trim(),
+        forgotCode.trim(),
+        forgotNewPassword.trim()
+      );
+      setForgotMessage(response.data?.message || 'Password reset successful.');
+      setForgotStep('success');
+    } catch (err) {
+      setForgotError(err.response?.data || 'Failed to reset password.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   const handleModalClose = () => {
     setShowModal(false);
     // If user is already authenticated (auto-generated key on login), go to dashboard
@@ -198,6 +265,7 @@ const LoginForm = () => {
         </div>
 
           {/* Form */}
+          {!showForgotFlow && (
           <form onSubmit={handleSubmit} className="auth-form">
             {error && <div className="error-alert">{error}</div>}
 
@@ -243,7 +311,7 @@ const LoginForm = () => {
               <div className="input-field password-field">
                 <span className="field-icon">🔒</span>
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               name="password"
               value={formData.password}
               onChange={handleInputChange}
@@ -252,12 +320,30 @@ const LoginForm = () => {
               required
               minLength={6}
             />
-                {isLogin && (
-                  <a href="#forgot" className="forgot-password-link" onClick={(e) => e.preventDefault()}>
-                    Forgot password?
-                  </a>
-                )}
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
               </div>
+              {isLogin && (
+                <button
+                  type="button"
+                  className="forgot-password-link"
+                  onClick={() => {
+                    setShowForgotFlow(true);
+                    setForgotStep('email');
+                    setForgotEmail(formData.email || '');
+                    setForgotError('');
+                    setForgotMessage('');
+                  }}
+                >
+                  Forgot password?
+                </button>
+              )}
           </div>
 
             {/* Submit Button */}
@@ -269,6 +355,142 @@ const LoginForm = () => {
               {loading ? '⏳ Processing...' : isLogin ? 'Sign In' : 'Create Account'}
             </button>
         </form>
+        )}
+        {showForgotFlow && (
+          <div className="auth-form">
+            <div className="forgot-card">
+              <h3 className="forgot-title">Forgot Password</h3>
+              <p className="forgot-desc">
+                Enter the same email you registered with. We will send a code to that email.
+              </p>
+              {forgotError && <div className="error-alert">{forgotError}</div>}
+              {forgotMessage && <div className="success-alert">{forgotMessage}</div>}
+
+              {forgotStep === 'email' && (
+                <>
+                  <div className="input-group">
+                    <label className="input-label">Email</label>
+                    <div className="input-field">
+                      <span className="field-icon">📧</span>
+                      <input
+                        type="email"
+                        className="text-input"
+                        placeholder="Enter your registered email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="submit-button"
+                    onClick={handleForgotRequest}
+                    disabled={forgotLoading || !forgotEmail.trim()}
+                  >
+                    {forgotLoading ? 'Sending...' : 'Send Code'}
+                  </button>
+                </>
+              )}
+
+              {forgotStep === 'code' && (
+                <>
+                  <div className="input-group">
+                    <label className="input-label">Verification Code</label>
+                    <div className="input-field">
+                      <span className="field-icon">🔑</span>
+                      <input
+                        type="text"
+                        className="text-input"
+                        placeholder="Enter the code from your email"
+                        value={forgotCode}
+                        onChange={(e) => setForgotCode(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="submit-button"
+                    onClick={handleForgotVerify}
+                    disabled={forgotLoading || !forgotCode.trim()}
+                  >
+                    {forgotLoading ? 'Verifying...' : 'Verify Code'}
+                  </button>
+                </>
+              )}
+
+              {forgotStep === 'reset' && (
+                <>
+                  <div className="input-group">
+                    <label className="input-label">New Password</label>
+                    <div className="input-field">
+                      <span className="field-icon">🔒</span>
+                      <input
+                        type="password"
+                        className="text-input"
+                        placeholder="Enter new password"
+                        value={forgotNewPassword}
+                        onChange={(e) => setForgotNewPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Confirm Password</label>
+                    <div className="input-field">
+                      <span className="field-icon">🔒</span>
+                      <input
+                        type="password"
+                        className="text-input"
+                        placeholder="Confirm new password"
+                        value={forgotConfirmPassword}
+                        onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="submit-button"
+                    onClick={handleForgotReset}
+                    disabled={forgotLoading}
+                  >
+                    {forgotLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </>
+              )}
+
+              {forgotStep === 'success' && (
+                <>
+                  <p className="forgot-desc">Your password has been reset. Please sign in again.</p>
+                  <button
+                    type="button"
+                    className="submit-button"
+                    onClick={() => {
+                      setShowForgotFlow(false);
+                      setForgotStep('email');
+                      setForgotEmail('');
+                      setForgotCode('');
+                      setForgotNewPassword('');
+                      setForgotConfirmPassword('');
+                      setForgotError('');
+                      setForgotMessage('');
+                    }}
+                  >
+                    Back to Sign In
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ marginTop: '0.75rem' }}
+                onClick={() => setShowForgotFlow(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         </div>
       </div>
 
