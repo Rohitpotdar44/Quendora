@@ -175,12 +175,14 @@ public class FileController {
     /**
      * Search files by extracted text content (OCR/text extraction must be run at least once).
      */
-    @GetMapping("/ai/search")
-    public ResponseEntity<?> searchFiles(@RequestParam("q") String query,
+    @PostMapping("/ai/search")
+    public ResponseEntity<?> searchFiles(@RequestBody SearchRequest request,
                                          Authentication authentication) {
         try {
             String userName = authentication.getName();
-            return ResponseEntity.ok(fileAIService.searchFilesByContent(userName, query));
+            return ResponseEntity.ok(
+                    fileAIService.searchFilesByContent(userName, request.query(), request.secretKey())
+            );
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -190,5 +192,7 @@ public class FileController {
      * Simple request body that only needs the secret key for decryption.
      */
     public record SecretKeyRequest(String secretKey) {}
+
+    public record SearchRequest(String query, String secretKey) {}
 }
 

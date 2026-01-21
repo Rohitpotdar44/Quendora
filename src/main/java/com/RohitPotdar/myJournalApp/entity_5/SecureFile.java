@@ -65,6 +65,43 @@ public class SecureFile {
     private java.util.List<String> aiWarnings;
     private LocalDateTime aiUpdatedAt;
 
+    // Encrypted AI metadata (stored at rest)
+    private byte[] aiSummaryEncrypted;
+    private byte[] aiSummaryIv;
+    private byte[] aiSummarySalt;
+
+    private byte[] aiTagsEncrypted;
+    private byte[] aiTagsIv;
+    private byte[] aiTagsSalt;
+
+    private byte[] aiCaptionEncrypted;
+    private byte[] aiCaptionIv;
+    private byte[] aiCaptionSalt;
+
+    private byte[] aiOcrTextEncrypted;
+    private byte[] aiOcrTextIv;
+    private byte[] aiOcrTextSalt;
+
+    private byte[] aiSearchTextEncrypted;
+    private byte[] aiSearchTextIv;
+    private byte[] aiSearchTextSalt;
+
+    private byte[] aiHighlightsEncrypted;
+    private byte[] aiHighlightsIv;
+    private byte[] aiHighlightsSalt;
+
+    private byte[] aiSuggestedNameEncrypted;
+    private byte[] aiSuggestedNameIv;
+    private byte[] aiSuggestedNameSalt;
+
+    private byte[] aiTranscriptEncrypted;
+    private byte[] aiTranscriptIv;
+    private byte[] aiTranscriptSalt;
+
+    private byte[] aiWarningsEncrypted;
+    private byte[] aiWarningsIv;
+    private byte[] aiWarningsSalt;
+
     private LocalDateTime createdAt;
 }
 

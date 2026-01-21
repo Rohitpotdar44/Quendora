@@ -127,8 +127,8 @@ export const fileAPI = {
   analyzeFile: (fileId, secretKey) =>
     api.post(`/api/files/ai/analyze/${fileId}`, { secretKey }),
 
-  // AI search files by extracted content
-  searchFiles: (query) => api.get('/api/files/ai/search', { params: { q: query } })
+  // AI search files by extracted content (requires secretKey)
+  searchFiles: (query, secretKey) => api.post('/api/files/ai/search', { query, secretKey })
 };
 
 // AI API endpoints (uses backend proxy for security)

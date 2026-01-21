@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useRecoilValue } from 'recoil';
+import { authState } from '../../state/atoms';
 import { fileAPI } from '../../services/api';
 import FileCard from './FileCard';
 import FileUpload from './FileUpload';
 import './FileBrowser.css';
 
 const FileBrowser = () => {
+  const auth = useRecoilValue(authState);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [filterType, setFilterType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchKeyInput, setSearchKeyInput] = useState('');
   const [aiSearchIds, setAiSearchIds] = useState(null);
   const [aiSearchLoading, setAiSearchLoading] = useState(false);
   const [aiSearchError, setAiSearchError] = useState('');
@@ -145,7 +149,13 @@ const FileBrowser = () => {
     setAiSearchLoading(true);
     setAiSearchError('');
     try {
-      const response = await fileAPI.searchFiles(searchQuery.trim());
+      const keyToUse = searchKeyInput.trim() || auth.uniqueKey;
+      if (!keyToUse) {
+        setAiSearchError('Please enter your unique key to search.');
+        setAiSearchLoading(false);
+        return;
+      }
+      const response = await fileAPI.searchFiles(searchQuery.trim(), keyToUse);
       const ids = (response.data || []).map(file => file.id);
       setAiSearchIds(ids);
     } catch (err) {
@@ -223,6 +233,13 @@ const FileBrowser = () => {
             placeholder="Search inside files (OCR/text)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <input
+            type="password"
+            className="search-input"
+            placeholder="Unique key for search"
+            value={searchKeyInput}
+            onChange={(e) => setSearchKeyInput(e.target.value)}
           />
           <button
             className="btn btn-secondary btn-sm"
