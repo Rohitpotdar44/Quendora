@@ -33,13 +33,16 @@ public class PasswordResetService {
         this.sendGridEmailService = sendGridEmailService;
     }
 
-    public void sendResetCode(String email) {
-        User_12 user = userService14.findByEmail(email);
+    public void sendResetCode(String userName) {
+        User_12 user = userService14.findByUserName(userName);
         if (user == null) {
-            // Don't reveal user existence
-            return;
+            throw new IllegalArgumentException("User not found.");
+        }
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("No registered email found for this account.");
         }
 
+        String email = user.getEmail().trim();
         String code = generateCode();
         PasswordResetToken token = PasswordResetToken.builder()
                 .email(email)
@@ -54,7 +57,16 @@ public class PasswordResetService {
         sendGridEmailService.sendResetCode(email, code, ttlMinutes);
     }
 
-    public void verifyCode(String email, String code) {
+    public void verifyCode(String userName, String code) {
+        User_12 user = userService14.findByUserName(userName);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found.");
+        }
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("No registered email found for this account.");
+        }
+        String email = user.getEmail().trim();
+
         PasswordResetToken token = tokenRepository.findTopByEmailAndUsedFalseOrderByCreatedAtDesc(email)
                 .orElseThrow(() -> new IllegalArgumentException("Reset code not found. Please request a new code."));
 
@@ -73,7 +85,16 @@ public class PasswordResetService {
         }
     }
 
-    public void resetPassword(String email, String code, String newPassword) {
+    public void resetPassword(String userName, String code, String newPassword) {
+        User_12 user = userService14.findByUserName(userName);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found.");
+        }
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("No registered email found for this account.");
+        }
+        String email = user.getEmail().trim();
+
         PasswordResetToken token = tokenRepository.findTopByEmailAndUsedFalseOrderByCreatedAtDesc(email)
                 .orElseThrow(() -> new IllegalArgumentException("Reset code not found. Please request a new code."));
 
@@ -89,11 +110,6 @@ public class PasswordResetService {
             token.setAttempts(token.getAttempts() + 1);
             tokenRepository.save(token);
             throw new IllegalArgumentException("Invalid reset code.");
-        }
-
-        User_12 user = userService14.findByEmail(email);
-        if (user == null) {
-            throw new IllegalArgumentException("User not found.");
         }
 
         userService14.updatePassword(user, newPassword);

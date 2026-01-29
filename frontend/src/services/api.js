@@ -67,10 +67,10 @@ export const authAPI = {
   createAdmin: (adminData) => api.post('/public/createAdmin', adminData),
 
   // Forgot password flow
-  requestResetCode: (email) => api.post('/public/forgot-password/request', { email }),
-  verifyResetCode: (email, code) => api.post('/public/forgot-password/verify', { email, code }),
-  resetPassword: (email, code, newPassword) =>
-    api.post('/public/forgot-password/reset', { email, code, newPassword }),
+  requestResetCode: (userName) => api.post('/public/forgot-password/request', { userName }),
+  verifyResetCode: (userName, code) => api.post('/public/forgot-password/verify', { userName, code }),
+  resetPassword: (userName, code, newPassword) =>
+    api.post('/public/forgot-password/reset', { userName, code, newPassword }),
 };
 
 // Journal API endpoints

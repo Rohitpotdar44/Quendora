@@ -230,16 +230,9 @@ const FileBrowser = () => {
           <input
             type="text"
             className="search-input"
-            placeholder="Search inside files (OCR/text)..."
+            placeholder="Search inside files "
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <input
-            type="password"
-            className="search-input"
-            placeholder="Unique key for search"
-            value={searchKeyInput}
-            onChange={(e) => setSearchKeyInput(e.target.value)}
           />
           <button
             className="btn btn-secondary btn-sm"

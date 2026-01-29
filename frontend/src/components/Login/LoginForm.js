@@ -34,7 +34,6 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotFlow, setShowForgotFlow] = useState(false);
   const [forgotStep, setForgotStep] = useState('email');
-  const [forgotEmail, setForgotEmail] = useState('');
   const [forgotCode, setForgotCode] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
@@ -160,11 +159,16 @@ const LoginForm = () => {
   };
 
   const handleForgotRequest = async () => {
+    const userNameToUse = formData.userName.trim();
+    if (!userNameToUse) {
+      setForgotError('Please enter your username on the sign-in form first.');
+      return;
+    }
     setForgotLoading(true);
     setForgotError('');
     setForgotMessage('');
     try {
-      const response = await authAPI.requestResetCode(forgotEmail.trim());
+      const response = await authAPI.requestResetCode(userNameToUse);
       setForgotMessage(response.data?.message || 'Reset code sent.');
       setForgotStep('code');
     } catch (err) {
@@ -178,7 +182,7 @@ const LoginForm = () => {
     setForgotLoading(true);
     setForgotError('');
     try {
-      const response = await authAPI.verifyResetCode(forgotEmail.trim(), forgotCode.trim());
+      const response = await authAPI.verifyResetCode(formData.userName.trim(), forgotCode.trim());
       setForgotMessage(response.data?.message || 'Code verified.');
       setForgotStep('reset');
     } catch (err) {
@@ -203,7 +207,7 @@ const LoginForm = () => {
     }
     try {
       const response = await authAPI.resetPassword(
-        forgotEmail.trim(),
+        formData.userName.trim(),
         forgotCode.trim(),
         forgotNewPassword.trim()
       );
@@ -336,7 +340,6 @@ const LoginForm = () => {
                   onClick={() => {
                     setShowForgotFlow(true);
                     setForgotStep('email');
-                    setForgotEmail(formData.email || '');
                     setForgotError('');
                     setForgotMessage('');
                   }}
@@ -361,34 +364,20 @@ const LoginForm = () => {
             <div className="forgot-card">
               <h3 className="forgot-title">Forgot Password</h3>
               <p className="forgot-desc">
-                Enter the same email you registered with. We will send a code to that email.
+                Click below to send a reset code to your registered email.
               </p>
               {forgotError && <div className="error-alert">{forgotError}</div>}
               {forgotMessage && <div className="success-alert">{forgotMessage}</div>}
 
               {forgotStep === 'email' && (
                 <>
-                  <div className="input-group">
-                    <label className="input-label">Email</label>
-                    <div className="input-field">
-                      <span className="field-icon">📧</span>
-                      <input
-                        type="email"
-                        className="text-input"
-                        placeholder="Enter your registered email"
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
                   <button
                     type="button"
                     className="submit-button"
                     onClick={handleForgotRequest}
-                    disabled={forgotLoading || !forgotEmail.trim()}
+                    disabled={forgotLoading}
                   >
-                    {forgotLoading ? 'Sending...' : 'Send Code'}
+                    {forgotLoading ? 'Sending...' : 'Send Reset Code'}
                   </button>
                 </>
               )}
@@ -467,7 +456,6 @@ const LoginForm = () => {
                     onClick={() => {
                       setShowForgotFlow(false);
                       setForgotStep('email');
-                      setForgotEmail('');
                       setForgotCode('');
                       setForgotNewPassword('');
                       setForgotConfirmPassword('');

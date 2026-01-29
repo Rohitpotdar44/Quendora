@@ -249,7 +249,7 @@
 .submit-button {
   width: 60%;
   padding: 1rem;
-  margin-left: 100px;
+  margin-left: 90px;
   background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 50%, #FFA500 100%);
   color: white;
   border: none;
@@ -260,6 +260,7 @@
   transition: all 0.3s ease;
   box-shadow: 0 4px 20px rgba(255, 140, 66, 0.4);
   letter-spacing: 0.3px;
+  margin-right: 10px;
 }
 
 .submit-button:hover {

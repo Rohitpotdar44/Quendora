@@ -35,13 +35,12 @@ public class PublicController_19 {
     @PostMapping("/forgot-password/request")
     public ResponseEntity<?> requestPasswordReset(@RequestBody Map<String, String> request) {
         try {
-            String email = request.get("email");
-            if (email == null || email.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Email is required");
+            String userName = request.get("userName");
+            if (userName == null || userName.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Username is required");
             }
-            passwordResetService.sendResetCode(email.trim());
-            // Always return OK to avoid user enumeration
-            return ResponseEntity.ok(Map.of("message", "If the email exists, a reset code has been sent."));
+            passwordResetService.sendResetCode(userName.trim());
+            return ResponseEntity.ok(Map.of("message", "Reset code sent to your registered email."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to send reset code: " + e.getMessage());
         }
@@ -50,15 +49,15 @@ public class PublicController_19 {
     @PostMapping("/forgot-password/verify")
     public ResponseEntity<?> verifyResetCode(@RequestBody Map<String, String> request) {
         try {
-            String email = request.get("email");
+            String userName = request.get("userName");
             String code = request.get("code");
-            if (email == null || email.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Email is required");
+            if (userName == null || userName.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Username is required");
             }
             if (code == null || code.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Reset code is required");
             }
-            passwordResetService.verifyCode(email.trim(), code.trim());
+            passwordResetService.verifyCode(userName.trim(), code.trim());
             return ResponseEntity.ok(Map.of("message", "Code verified"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -68,11 +67,11 @@ public class PublicController_19 {
     @PostMapping("/forgot-password/reset")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
         try {
-            String email = request.get("email");
+            String userName = request.get("userName");
             String code = request.get("code");
             String newPassword = request.get("newPassword");
-            if (email == null || email.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Email is required");
+            if (userName == null || userName.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Username is required");
             }
             if (code == null || code.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Reset code is required");
@@ -80,7 +79,7 @@ public class PublicController_19 {
             if (newPassword == null || newPassword.trim().length() < 6) {
                 return ResponseEntity.badRequest().body("Password must be at least 6 characters");
             }
-            passwordResetService.resetPassword(email.trim(), code.trim(), newPassword.trim());
+            passwordResetService.resetPassword(userName.trim(), code.trim(), newPassword.trim());
             return ResponseEntity.ok(Map.of("message", "Password reset successful"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
