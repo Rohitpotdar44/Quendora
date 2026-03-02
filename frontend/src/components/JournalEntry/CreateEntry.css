@@ -112,7 +112,7 @@
   border: 1px solid #fc8181;
 }
 
-/* AI Rewrite Button */
+/* AI Rewrite Button (disabled for review 1)
 .btn-ai-rewrite {
   width: 100%;
   padding: 14px 20px;
@@ -169,3 +169,4 @@
   background: #f0f4ff;
   border-left-color: #667eea;
 }
+*/

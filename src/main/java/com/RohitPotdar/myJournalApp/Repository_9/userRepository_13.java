@@ -10,6 +10,8 @@ public interface userRepository_13 extends MongoRepository<User_12, ObjectId> {
     User_12 findByUserName(String username); //
     // now create respective method in the services
 
+    User_12 findByEmail(String email);
+
     void deleteByUserName(String username);
 
 }

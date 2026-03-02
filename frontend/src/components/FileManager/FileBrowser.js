@@ -9,7 +9,8 @@ import './FileBrowser.css';
 const FileBrowser = () => {
   const auth = useRecoilValue(authState);
   const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [filterType, setFilterType] = useState('all');
@@ -25,7 +26,7 @@ const FileBrowser = () => {
 
   const loadFiles = async () => {
     try {
-      setLoading(true);
+      setIsRefreshing(true);
       setError('');
       console.log('[FileBrowser] Loading files...');
       
@@ -39,6 +40,7 @@ const FileBrowser = () => {
       setFiles([]);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -104,13 +106,8 @@ const FileBrowser = () => {
     if (searchTerm) {
       filtered = filtered.filter(file => {
         const title = (file.plaintextTitle || file.originalFileName || file.aiSuggestedName || '').toLowerCase();
-        const searchText = (file.aiSearchText || '').toLowerCase();
-        const matchesLocal = title.includes(searchTerm) || searchText.includes(searchTerm);
-        const matchesAi = Array.isArray(aiSearchIds) ? aiSearchIds.includes(file.id) : false;
-        return matchesLocal || matchesAi;
+        return title.includes(searchTerm);
       });
-    } else if (Array.isArray(aiSearchIds)) {
-      filtered = filtered.filter(file => aiSearchIds.includes(file.id));
     }
 
     return filtered;
@@ -230,22 +227,29 @@ const FileBrowser = () => {
           <input
             type="text"
             className="search-input"
-            placeholder="Search inside files "
+            placeholder="Search file titles or content with AI"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={handleAiSearch}
-            disabled={aiSearchLoading}
-          >
-            {aiSearchLoading ? 'Searching...' : 'Search Content'}
-          </button>
-          {aiSearchIds && (
-            <button className="btn btn-sm" onClick={clearAiSearch}>
-              Clear
+          <div className="ai-search-controls">
+            <button
+              type="button"
+              className="btn btn-sm btn-ai-search"
+              onClick={handleAiSearch}
+              disabled={aiSearchLoading}
+            >
+              {aiSearchLoading ? 'Searching…' : '🔍 AI Search'}
             </button>
-          )}
+            {aiSearchIds && (
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary"
+                onClick={clearAiSearch}
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -265,7 +269,14 @@ const FileBrowser = () => {
 
       {/* Files grid */}
       <div className="files-container">
-        {loading ? (
+        {(loading || isRefreshing) && filteredFiles.length === 0 ? (
+          <div className="empty-state syncing-state">
+            <div className="empty-icon">📁</div>
+            <p className="syncing-indicator">
+              <strong>Syncing files...</strong>
+            </p>
+          </div>
+        ) : loading ? (
           <div className="loading-state">
             <div className="loading-spinner-large"></div>
             <p>Loading your files...</p>

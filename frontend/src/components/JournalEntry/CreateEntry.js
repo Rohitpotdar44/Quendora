@@ -149,31 +149,28 @@ const CreateEntry = ({ onSave, onCancel }) => {
             </small>
           </div>
 
-          {/* Rewrite with AI Button */}
-          {formData.title.trim() && formData.content.trim() && formData.content.trim().length >= 10 && (
-            <div className="form-group">
-              <button
-                type="button"
-                onClick={handleRewriteWithAI}
-                disabled={rewriting || loading}
-                className="btn btn-ai-rewrite"
-              >
-                {rewriting ? (
-                  <>
-                    <span className="loading-spinner"></span>
-                    ✨ AI is Rewriting...
-                  </>
-                ) : (
-                  <>
-                    ✨ Rewrite with AI
-                  </>
-                )}
-              </button>
-              <small className="form-hint ai-rewrite-hint">
-                💡 Improve grammar, clarity, and flow while keeping your original meaning
-              </small>
-            </div>
-          )}
+          <div className="form-group">
+            <button
+              type="button"
+              onClick={handleRewriteWithAI}
+              disabled={rewriting || loading}
+              className="btn btn-ai-rewrite"
+            >
+              {rewriting ? (
+                <>
+                  <span className="loading-spinner"></span>
+                  ✨ AI is Rewriting...
+                </>
+              ) : (
+                <>
+                  ✨ Rewrite with AI
+                </>
+              )}
+            </button>
+            <small className="form-hint ai-rewrite-hint">
+              💡 Improve grammar, clarity, and flow while keeping your original meaning
+            </small>
+          </div>
 
           <div className="form-group">
             <label className="form-label">🔑 Unique Key (Required for Encryption)</label>

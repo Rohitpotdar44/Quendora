@@ -305,32 +305,40 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
         <div className="decrypted-preview">
           {decryptedMetadata.type === 'image' && (
             <div className="preview-container">
-              <img src={decryptedMetadata.url} alt="Decrypted file" className="preview-image" />
+              <img
+                src={decryptedMetadata.url}
+                alt="Decrypted file"
+                className="preview-image"
+              />
             </div>
           )}
-          
+
           {decryptedMetadata.type === 'video' && (
             <div className="preview-container">
-              <video controls className="preview-video" src={decryptedMetadata.url}>
+              <video
+                controls
+                className="preview-video"
+                src={decryptedMetadata.url}
+              >
                 Your browser does not support video playback.
               </video>
             </div>
           )}
-          
+
           {decryptedMetadata.type === 'pdf' && (
             <div className="preview-info">
               <div className="preview-icon">📄</div>
               <p className="preview-text">Your PDF is ready</p>
             </div>
           )}
-          
+
           {decryptedMetadata.type === 'document' && (
             <div className="preview-info">
               <div className="preview-icon">📝</div>
               <p className="preview-text">Your document is ready</p>
             </div>
           )}
-          
+
           <div className="decrypted-actions">
             <button onClick={handleView} className="btn btn-primary btn-sm">
               👁️ View File
@@ -346,7 +354,7 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
       )}
 
         <div className="file-card-actions">
-          {!decryptedMetadata ? (
+          {!decryptedMetadata && (
             <button 
               onClick={() => {
                 if (showDecryptForm) {
@@ -363,18 +371,6 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
             >
               {loading ? '🔄 Decrypting...' : (showDecryptForm ? '🔓 Decrypt and View File' : '🔓 Decrypt')}
             </button>
-          ) : (
-            <button 
-              onClick={() => {
-                setShowDecryptForm(true);
-                setDecryptedMetadata(null);
-                setDecryptedTitle('');
-              }}
-              className="action-btn decrypt-btn"
-              title="Decrypt again with new key"
-            >
-              🔓 Decrypt Again
-            </button>
           )}
           <button 
             onClick={handleDelete}
@@ -384,102 +380,13 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
             🗑️ Delete
           </button>
           <button
-            onClick={() => setShowAiPanel(!showAiPanel)}
+            onClick={() => setShowAiPanel(true)}
             className="action-btn ai-btn"
             title="AI Insights"
           >
             ✨ AI Insights
           </button>
         </div>
-
-        {showAiPanel && (
-          <div className="ai-panel">
-            <div className="ai-panel-header">
-              <h5>✨ AI Insights</h5>
-              <button className="ai-close-btn" onClick={() => setShowAiPanel(false)}>✕</button>
-            </div>
-
-            <div className="ai-panel-body">
-              <div className="form-group">
-                <label className="form-label">🔑 Unique Key (required)</label>
-                <input
-                  type="password"
-                  value={aiKeyInput}
-                  onChange={(e) => setAiKeyInput(e.target.value)}
-                  className="form-input"
-                  placeholder="Enter your unique key"
-                />
-              </div>
-
-              <button
-                className="btn btn-primary btn-sm ai-run-btn"
-                onClick={handleAiAnalyze}
-                disabled={aiLoading}
-              >
-                {aiLoading ? '⏳ Analyzing...' : 'Run AI Analysis'}
-              </button>
-
-              {aiError && <div className="alert alert-error">{aiError}</div>}
-
-              {aiInsights && (
-                <div className="ai-results">
-                  {!isVideo && aiInsights.summary && (
-                    <div className="ai-block">
-                      <strong>Summary</strong>
-                      <p>{aiInsights.summary}</p>
-                    </div>
-                  )}
-                  {!isVideo && aiInsights.tags && aiInsights.tags.length > 0 && (
-                    <div className="ai-block">
-                      <strong>Tags</strong>
-                      <div className="ai-tags">
-                        {aiInsights.tags.map((tag, idx) => (
-                          <span key={idx} className="ai-tag">#{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {!isVideo && aiInsights.caption && (
-                    <div className="ai-block">
-                      <strong>Image Caption</strong>
-                      <p>{aiInsights.caption}</p>
-                    </div>
-                  )}
-                  {!isVideo && aiInsights.highlights && (
-                    <div className="ai-block">
-                      <strong>Video Highlights</strong>
-                      <p style={{ whiteSpace: 'pre-line' }}>{aiInsights.highlights}</p>
-                    </div>
-                  )}
-                  {!isVideo && aiInsights.transcript && (
-                    <div className="ai-block">
-                      <strong>Full Transcript</strong>
-                      <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem', maxHeight: '200px', overflowY: 'auto' }}>
-                        {aiInsights.transcript}
-                      </p>
-                    </div>
-                  )}
-                  {aiInsights.suggestedFileName && (
-                    <div className="ai-block">
-                      <strong>Suggested File Name</strong>
-                      <p>{aiInsights.suggestedFileName}</p>
-                    </div>
-                  )}
-                  {!isVideo && aiInsights.warnings && aiInsights.warnings.length > 0 && (
-                    <div className="ai-block ai-warnings">
-                      <strong>Notes</strong>
-                      <ul>
-                        {aiInsights.warnings.map((w, idx) => (
-                          <li key={idx}>{w}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {showDeleteConfirm && (
@@ -527,6 +434,124 @@ const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
               <button onClick={confirmDelete} className="btn btn-danger">
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAiPanel && (
+        <div className="ai-modal-overlay" onClick={() => setShowAiPanel(false)}>
+          <div
+            className="ai-modal"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <div className="ai-panel-header">
+              <h5>✨ AI Insights</h5>
+              <button
+                className="ai-close-btn"
+                onClick={() => setShowAiPanel(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="ai-panel-body">
+              {!aiInsights && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">🔑 Unique Key (required)</label>
+                    <input
+                      type="password"
+                      value={aiKeyInput}
+                      onChange={(e) => setAiKeyInput(e.target.value)}
+                      className="form-input"
+                      placeholder="Enter your unique key"
+                    />
+                  </div>
+
+                  <button
+                    className="btn btn-primary btn-sm ai-run-btn"
+                    onClick={handleAiAnalyze}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? '⏳ Analyzing...' : 'Run AI Analysis'}
+                  </button>
+                </>
+              )}
+
+              {aiError && !aiInsights && <div className="alert alert-error">{aiError}</div>}
+
+              {aiInsights && (
+                <div className="ai-results">
+                  {!isVideo && aiInsights.summary && (
+                    <div className="ai-block">
+                      <strong>Summary</strong>
+                      <p>{aiInsights.summary}</p>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.tags && aiInsights.tags.length > 0 && (
+                    <div className="ai-block">
+                      <strong>Tags</strong>
+                      <div className="ai-tags">
+                        {aiInsights.tags.map((tag, idx) => (
+                          <span key={idx} className="ai-tag">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.caption && (
+                    <div className="ai-block">
+                      <strong>Image Caption</strong>
+                      <p>{aiInsights.caption}</p>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.highlights && (
+                    <div className="ai-block">
+                      <strong>Video Highlights</strong>
+                      <p style={{ whiteSpace: 'pre-line' }}>
+                        {aiInsights.highlights}
+                      </p>
+                    </div>
+                  )}
+                  {!isVideo && aiInsights.transcript && (
+                    <div className="ai-block">
+                      <strong>Full Transcript</strong>
+                      <p
+                        style={{
+                          whiteSpace: 'pre-wrap',
+                          fontSize: '0.9rem',
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                        }}
+                      >
+                        {aiInsights.transcript}
+                      </p>
+                    </div>
+                  )}
+                  {aiInsights.suggestedFileName && (
+                    <div className="ai-block">
+                      <strong>Suggested File Name</strong>
+                      <p>{aiInsights.suggestedFileName}</p>
+                    </div>
+                  )}
+                  {!isVideo &&
+                    aiInsights.warnings &&
+                    aiInsights.warnings.length > 0 && (
+                      <div className="ai-block ai-warnings">
+                        <strong>Notes</strong>
+                        <ul>
+                          {aiInsights.warnings.map((w, idx) => (
+                            <li key={idx}>{w}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                </div>
+              )}
             </div>
           </div>
         </div>

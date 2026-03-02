@@ -156,9 +156,6 @@ public class FileController {
         }
     }
 
-    /**
-     * Run AI analysis on a decrypted file (summary, tags, OCR/search text, captions, highlights).
-     */
     @PostMapping("/ai/analyze/{fileId}")
     public ResponseEntity<?> analyzeFile(@PathVariable String fileId,
                                          @RequestBody SecretKeyRequest request,
@@ -172,9 +169,6 @@ public class FileController {
         }
     }
 
-    /**
-     * Search files by extracted text content (OCR/text extraction must be run at least once).
-     */
     @PostMapping("/ai/search")
     public ResponseEntity<?> searchFiles(@RequestBody SearchRequest request,
                                          Authentication authentication) {

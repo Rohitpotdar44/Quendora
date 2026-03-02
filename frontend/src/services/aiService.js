@@ -1,3 +1,4 @@
+// AI service enabled (previously disabled for review)
 /**
  * AI Service for Journal App
  * Provides AI-powered rewrite functionality

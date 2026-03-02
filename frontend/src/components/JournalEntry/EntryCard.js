@@ -258,7 +258,7 @@ const EntryCard = ({ entry, onDelete, onEdit }) => {
           <span className="entry-date">
           📅 {formatDate(entry.localDateTime)}
           </span>
-        {locked && (
+        {locked && !isDecrypted && (
           <span className="encryption-badge">🔒 Encrypted</span>
           )}
         {isDecrypted && (

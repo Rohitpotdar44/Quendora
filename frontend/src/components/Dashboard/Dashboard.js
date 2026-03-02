@@ -16,7 +16,8 @@ const Dashboard = () => {
     // Restore active tab from localStorage
     return localStorage.getItem('dashboard_active_tab') || 'entries';
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('newest');
   
@@ -26,6 +27,12 @@ const Dashboard = () => {
   useEffect(() => {
     console.log('[Dashboard] Component mounted, restoring auth and loading entries...');
     
+    // If auth is already in state, don't block the UI
+    if (auth?.isAuthenticated && auth.user) {
+      loadEntriesFromBackend(auth.uniqueKey);
+      return;
+    }
+
     // Check localStorage for auth data
     const authData = localStorage.getItem('auth_state');
     
@@ -41,7 +48,7 @@ const Dashboard = () => {
         // Update Recoil state with localStorage data
         setAuth(parsedAuth);
         
-        // Load entries after auth is restored
+        // Load entries after auth is restored (non-blocking)
         if (parsedAuth.isAuthenticated) {
           loadEntriesFromBackend(parsedAuth.uniqueKey);
         } else {
@@ -62,6 +69,7 @@ const Dashboard = () => {
   const loadEntriesFromBackend = async (uniqueKey) => {
     try {
       console.log('[Dashboard] Loading entries from backend...');
+      setIsRefreshing(true);
           const response = await journalAPI.getAllEntries();
       console.log('[Dashboard] ✅ Loaded', response.data?.length || 0, 'entries from backend');
           setEntries(response.data || []);
@@ -70,6 +78,7 @@ const Dashboard = () => {
           setEntries([]);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
       }
     };
 
@@ -237,13 +246,15 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="dashboard-main">
         <div className="main-content">
-          {activeTab === 'entries' && (
-            <div className="entries-section">
+          <div
+            className={`entries-section section-panel ${
+              activeTab === 'entries' ? 'active' : ''
+            }`}
+          >
               <div className="section-header">
                 <h2 className="section-title">Journal Entries</h2>
-               
               </div>
-              
+
               {showCreateForm && (
                 <CreateEntry 
                   onSave={handleCreateEntry}
@@ -295,7 +306,14 @@ const Dashboard = () => {
               )}
               
               <div className="entries-list">
-                {loading ? (
+                {(loading || isRefreshing) && entries.length === 0 ? (
+                  <div className="empty-state syncing-state">
+                    <div className="empty-icon">📝</div>
+                    <p className="syncing-indicator">
+                      <strong>Syncing entries...</strong>
+                    </p>
+                  </div>
+                ) : loading ? (
                   <div className="loading-state">
                     <div className="loading-spinner"></div>
                     <p>Loading your entries...</p>
@@ -336,47 +354,50 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
-          )}
 
-          {activeTab === 'files' && (
-            <div className="files-section">
-              <FileBrowser />
-            </div>
-          )}
+          <div
+            className={`files-section section-panel ${
+              activeTab === 'files' ? 'active' : ''
+            }`}
+          >
+            <FileBrowser />
+          </div>
 
-          {activeTab === 'profile' && (
-            <div className="profile-section">
-              <div className="card">
-                <div className="card-header">
-                  <h2 className="card-title">👤 Profile Information</h2>
+          <div
+            className={`profile-section section-panel ${
+              activeTab === 'profile' ? 'active' : ''
+            }`}
+          >
+            <div className="card">
+              <div className="card-header">
+                <h2 className="card-title">👤 Profile Information</h2>
+              </div>
+              <div className="profile-info">
+                <div className="info-row">
+                  <label>Username:</label>
+                  <span>{auth.user.username}</span>
                 </div>
-                <div className="profile-info">
-                  <div className="info-row">
-                    <label>Username:</label>
-                    <span>{auth.user.username}</span>
+                <div className="info-row">
+                  <label>Email:</label>
+                  <span>{auth.user.email}</span>
+                </div>
+                <div className="info-row">
+                  <label>Roles:</label>
+                  <div className="roles-list">
+                    {auth.user.roles?.map(role => (
+                      <span key={role} className={`role-badge ${role.toLowerCase()}`}>
+                        {role}
+                      </span>
+                    ))}
                   </div>
-                  <div className="info-row">
-                    <label>Email:</label>
-                    <span>{auth.user.email}</span>
-                  </div>
-                  <div className="info-row">
-                    <label>Roles:</label>
-                    <div className="roles-list">
-                      {auth.user.roles?.map(role => (
-                        <span key={role} className={`role-badge ${role.toLowerCase()}`}>
-                          {role}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="info-row">
-                    <label>Total Entries:</label>
-                    <span>{entries.length}</span>
-                  </div>
+                </div>
+                <div className="info-row">
+                  <label>Total Entries:</label>
+                  <span>{entries.length}</span>
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </main>
     </div>

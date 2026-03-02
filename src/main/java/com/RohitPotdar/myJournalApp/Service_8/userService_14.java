@@ -326,10 +326,7 @@ public class userService_14 {
      * Find user by email
      */
     public User_12 findByEmail(String email) {
-        return getAllEntries().stream()
-                .filter(user -> email.equals(user.getEmail()))
-                .findFirst()
-                .orElse(null);
+        return userRepository_13.findByEmail(email);
     }
 
 

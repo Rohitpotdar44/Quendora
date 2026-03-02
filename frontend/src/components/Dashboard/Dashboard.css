@@ -372,6 +372,40 @@
   border: 1px solid #86efac;
 }
 
+/* Syncing indicator for entries */
+.syncing-indicator {
+  margin-bottom: 12px;
+  text-align: center;
+  color: #FF8C42;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  animation: syncPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes syncPulse {
+  0% {
+    opacity: 0.4;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+  100% {
+    opacity: 0.4;
+    transform: translateY(0);
+  }
+}
+
+/* Dashboard tab panels */
+.section-panel {
+  display: none;
+}
+
+.section-panel.active {
+  display: block;
+}
+
 .dashboard-loading {
   min-height: 100vh;
   display: flex;

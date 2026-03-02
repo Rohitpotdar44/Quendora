@@ -11,7 +11,7 @@ const UniqueKeyModal = ({ uniqueKey, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target.className === 'modal-overlay' && onClose()}>
+    <div className="modal-overlay">
       <div className="modal-content unique-key-modal">
         <div className="modal-header">
           <h2>🔑 Your Unique Encryption Key</h2>
