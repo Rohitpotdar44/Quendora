@@ -35,6 +35,9 @@ build/
 ### Node.js ###
 node_modules/
 
+# Frontend env files (do not commit)
+frontend/.env*
+
 # Ignore Spring Boot application config
 src/main/resources/application.properties
 

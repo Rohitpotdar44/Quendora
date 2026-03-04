@@ -15,7 +15,7 @@ const LoginForm = () => {
   useEffect(() => {
     if (window.google && window.google.accounts && window.google.accounts.id) {
       window.google.accounts.id.initialize({
-        client_id: '99693803741-94qcgo3ql9r83ae650oh252eo3mk42ga.apps.googleusercontent.com', // <-- UPDATED: New Google OAuth client ID
+        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '',
         callback: window.handleCredentialResponse
       });
       // Optionally: Uncomment to trigger One Tap immediately on mount:

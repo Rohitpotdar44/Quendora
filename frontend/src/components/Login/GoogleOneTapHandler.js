@@ -1,8 +1,10 @@
+import BASE_URL from '../../config/apiConfig';
+
 // Handles Google's One Tap/Sign-In response
 export function handleCredentialResponse(response) {
   const idToken = response.credential;
   // Send this token to your backend endpoint for Google authentication
-  fetch("http://localhost:8087/api/google-login", {
+  fetch(`${BASE_URL}/api/google-login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

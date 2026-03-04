@@ -30,6 +30,9 @@ public class VideoTranscriptService {
     @Value("${openai.title:}")
     private String openaiTitle;
 
+    @Value("${openai.audio.url:https://openrouter.ai/api/v1/audio/transcriptions}")
+    private String openaiAudioUrl;
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
@@ -57,8 +60,8 @@ public class VideoTranscriptService {
             return new TranscriptionResult("", warnings);
         }
 
-        // OpenRouter Whisper endpoint
-        String whisperUrl = "https://openrouter.ai/api/v1/audio/transcriptions";
+        // OpenRouter Whisper endpoint (configurable)
+        String whisperUrl = openaiAudioUrl;
         
         File tempFile = null;
         try {

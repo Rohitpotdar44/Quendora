@@ -108,7 +108,7 @@ public class SecurityConfig_17 extends WebSecurityConfigurerAdapter
         return new BCryptPasswordEncoder();
     }
 
-//    private static final String CONNECTION_STRING = "mongodb+srv://rj8008493:sUQGxHvJytakFKNj@cluster0.79bjqea.mongodb.net/journaldb?retryWrites=true&w=majority&appName=Cluster0";
+//    private static final String CONNECTION_STRING = "mongodb+srv://rj8008493:sUQGxHvJytakFKNj@cluster0.79bjqea.mongodb.net/QuendoraDb?retryWrites=true&w=majority&appName=Cluster0";
 //
 //
 //    @Bean
@@ -122,7 +122,7 @@ public class SecurityConfig_17 extends WebSecurityConfigurerAdapter
 
 //    @Bean
 //    public MongoClient mongoClient() {
-//        return MongoClients.create("mongodb+srv://rj8008493:sUQGxHvJytakFKNj@cluster0.79bjqea.mongodb.net/journaldb?retryWrites=true&w=majority&appName=Cluster0");
+//        return MongoClients.create("mongodb+srv://rj8008493:sUQGxHvJytakFKNj@cluster0.79bjqea.mongodb.net/QuendoraDb?retryWrites=true&w=majority&appName=Cluster0");
 //    }
 
 
