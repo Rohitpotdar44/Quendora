@@ -15,7 +15,6 @@ const FileBrowser = () => {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [filterType, setFilterType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchKeyInput, setSearchKeyInput] = useState('');
   const [aiSearchIds, setAiSearchIds] = useState(null);
   const [aiSearchLoading, setAiSearchLoading] = useState(false);
   const [aiSearchError, setAiSearchError] = useState('');
@@ -146,7 +145,7 @@ const FileBrowser = () => {
     setAiSearchLoading(true);
     setAiSearchError('');
     try {
-      const keyToUse = searchKeyInput.trim() || auth.uniqueKey;
+      const keyToUse = auth.uniqueKey;
       if (!keyToUse) {
         setAiSearchError('Please enter your unique key to search.');
         setAiSearchLoading(false);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { journalAPI, authAPI } from '../services/api';
+import { journalAPI } from '../services/api';
 
 const DebugPanel = () => {
   const [logs, setLogs] = useState([]);

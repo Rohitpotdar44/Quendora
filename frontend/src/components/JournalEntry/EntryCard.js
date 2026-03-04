@@ -3,7 +3,6 @@ import { useRecoilValue } from 'recoil';
 import { authState } from '../../state/atoms';
 import { journalAPI } from '../../services/api';
 import EditEntry from './EditEntry';
-import ConfirmDialog from '../Common/ConfirmDialog';
 import './EntryCard.css';
 
 const EntryCard = ({ entry, onDelete, onEdit }) => {

@@ -1,11 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { useRecoilValue } from 'recoil';
-import { authState } from '../../state/atoms';
 import { fileAPI } from '../../services/api';
 import './FileUpload.css';
 
 const FileUpload = ({ onUploadSuccess, onCancel }) => {
-  const auth = useRecoilValue(authState);
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState('');
   const [uniqueKey, setUniqueKey] = useState('');

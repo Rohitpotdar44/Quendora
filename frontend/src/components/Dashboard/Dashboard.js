@@ -64,6 +64,8 @@ const Dashboard = () => {
       setLoading(false);
       navigate('/login');
     }
+  // We intentionally run this once on mount to bootstrap auth+entries.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only once on mount
 
   const loadEntriesFromBackend = async (uniqueKey) => {

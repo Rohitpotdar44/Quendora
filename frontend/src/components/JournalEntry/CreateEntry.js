@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
-import { useRecoilValue } from 'recoil';
-import { authState } from '../../state/atoms';
 import { journalAPI } from '../../services/api';
 import { rewriteWithAI } from '../../services/aiService';
 import './CreateEntry.css';
 
 const CreateEntry = ({ onSave, onCancel }) => {
-  const auth = useRecoilValue(authState);
   const [formData, setFormData] = useState({
     title: '',
     content: '',

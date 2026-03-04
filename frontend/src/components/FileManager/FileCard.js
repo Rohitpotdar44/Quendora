@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { authState } from '../../state/atoms';
 import { fileAPI } from '../../services/api';
-import ConfirmDialog from '../Common/ConfirmDialog';
 import './FileCard.css';
 
 const FileCard = ({ file, onDelete, onDecryptSuccess }) => {
