@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useRecoilValue } from 'recoil';
-import { authState } from '../../state/atoms';
 import { fileAPI } from '../../services/api';
 import FileCard from './FileCard';
 import FileUpload from './FileUpload';
 import './FileBrowser.css';
 
 const FileBrowser = () => {
-  const auth = useRecoilValue(authState);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -15,9 +12,6 @@ const FileBrowser = () => {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [filterType, setFilterType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [aiSearchIds, setAiSearchIds] = useState(null);
-  const [aiSearchLoading, setAiSearchLoading] = useState(false);
-  const [aiSearchError, setAiSearchError] = useState('');
 
   useEffect(() => {
     loadFiles();
@@ -135,10 +129,6 @@ const FileBrowser = () => {
     }).length;
   };
 
-  // AI search disabled in UI; simple title filter only
-  const handleAiSearch = async () => {};
-  const clearAiSearch = () => {};
-
   return (
     <div className="file-browser">
       {/* Header */}
@@ -196,7 +186,7 @@ const FileBrowser = () => {
           <input
             type="text"
             className="search-input"
-            placeholder="Search file titles or content with AI"
+            placeholder="Search file titles"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
