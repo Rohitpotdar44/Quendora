@@ -135,39 +135,9 @@ const FileBrowser = () => {
     }).length;
   };
 
-  const handleAiSearch = async () => {
-    if (!searchQuery.trim()) {
-      setAiSearchIds(null);
-      setAiSearchError('');
-      return;
-    }
-
-    setAiSearchLoading(true);
-    setAiSearchError('');
-    try {
-      const keyToUse = auth.uniqueKey;
-      if (!keyToUse) {
-        setAiSearchError('Please enter your unique key to search.');
-        setAiSearchLoading(false);
-        return;
-      }
-      const response = await fileAPI.searchFiles(searchQuery.trim(), keyToUse);
-      const ids = (response.data || []).map(file => file.id);
-      setAiSearchIds(ids);
-    } catch (err) {
-      console.error('[FileBrowser] AI search failed:', err);
-      setAiSearchError('AI search failed. Please try again.');
-      setAiSearchIds([]);
-    } finally {
-      setAiSearchLoading(false);
-    }
-  };
-
-  const clearAiSearch = () => {
-    setSearchQuery('');
-    setAiSearchIds(null);
-    setAiSearchError('');
-  };
+  // AI search disabled in UI; simple title filter only
+  const handleAiSearch = async () => {};
+  const clearAiSearch = () => {};
 
   return (
     <div className="file-browser">
@@ -230,33 +200,8 @@ const FileBrowser = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <div className="ai-search-controls">
-            <button
-              type="button"
-              className="btn btn-sm btn-ai-search"
-              onClick={handleAiSearch}
-              disabled={aiSearchLoading}
-            >
-              {aiSearchLoading ? 'Searching…' : '🔍 AI Search'}
-            </button>
-            {aiSearchIds && (
-              <button
-                type="button"
-                className="btn btn-sm btn-secondary"
-                onClick={clearAiSearch}
-              >
-                Clear
-              </button>
-            )}
-          </div>
         </div>
       </div>
-
-      {aiSearchError && (
-        <div className="alert alert-error">
-          {aiSearchError}
-        </div>
-      )}
 
       {/* Error message */}
       {error && (
